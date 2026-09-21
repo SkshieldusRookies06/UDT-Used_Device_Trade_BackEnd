@@ -1,13 +1,26 @@
 # UDT — 백엔드 (메인 리포)
 
 > **이 프로젝트는 리포 2개로 구성됩니다.**
-> 프론트엔드: [UDT-Used_Device_Trade-frontend](https://github.com/<조직>/UDT-Used_Device_Trade-frontend) ← 링크를 채워 주세요
+> 프론트엔드: [UDT-Used_Device_Trade-frontend](https://github.com/dong279/UDT-Used_Device_Trade_Frontend) ← 링크를 채워 주세요
 > **계약 정본 `SPEC.md`와 제출 문서 `docs/`는 이 리포에 있습니다.**
 
 중고 거래의 "돈 보내고 물건을 못 받는" 문제를, **관리자 검수 → 가상 에스크로 →
 구매확정 전 정산 보류 → 분쟁 시 관리자 개입**이라는 거래 상태 프로세스로 해결하는 웹 서비스.
 
 SK Shielders Rookies 6기 웹 팀 프로젝트 (7명 · 2주)
+
+> ### 처음 팀 프로젝트를 한다면 여기부터
+>
+> **[`docs/참고/전체로드맵.md`](docs/참고/전체로드맵.md)** — D1부터 제출까지 10일이 날짜별로,
+> "오늘 누가 무엇을 하고, 끝났는지 어떻게 확인하는가"까지 적혀 있다.
+> 티켓(`tasks/`)이 **어떻게**라면, 로드맵은 **언제·어떤 순서로·지금 어디쯤인지**다.
+>
+> ### 내 역할 한 장 (1인 1파일 — 자기 것만 읽으면 된다)
+>
+> [`BE-A`](onboarding/역할별/BE-A.md) 리포·도메인(팀장) ·
+> [`BE-B`](onboarding/역할별/BE-B.md) 인증·관리자 ·
+> [`BE-C`](onboarding/역할별/BE-C.md) 상품·성능 ·
+> [`BE-D`](onboarding/역할별/BE-D.md) 거래·분쟁
 
 ---
 
@@ -53,12 +66,12 @@ node mock/server.mjs
 
 ### 시연 계정 (시드 · `src/main/resources/data.sql`)
 
-| 역할 | 이메일 | 비밀번호 | 잔액 |
-|---|---|---|---|
-| 관리자 | `admin@udt.test` | `Admin1234!` | — |
-| 판매자 | `seller1@udt.test` | `Test1234!` | 200만원 |
-| 구매자 | `buyer1@udt.test` | `Test1234!` | 200만원 |
-| 구매자(잔액부족 시연용) | `buyer2@udt.test` | `Test1234!` | 30만원 |
+| 역할                    | 이메일             | 비밀번호     | 잔액                             |
+| ----------------------- | ------------------ | ------------ | -------------------------------- |
+| 관리자                  | `admin@udt.test`   | `Admin1234!` | —                                |
+| 판매자                  | `seller1@udt.test` | `Test1234!`  | 252만원 (구매확정 1건 입금 반영) |
+| 구매자                  | `buyer1@udt.test`  | `Test1234!`  | 200만원                          |
+| 구매자(잔액부족 시연용) | `buyer2@udt.test`  | `Test1234!`  | 30만원                           |
 
 관리자 화면: **http://localhost:8080/admin/products**
 
@@ -73,30 +86,81 @@ UDT-Used_Device_Trade-backend/
 ├── OBSERVATIONS.md         마찰 기록 (날짜·현상·비어 있던 장치 · 사람 이름 없이)
 ├── seams/check-api.mjs     계약 게이트 (프론트도 npm run gate 로 이 파일을 실행한다)
 ├── mock/server.mjs         D1 땜빵 목 서버
-├── docs/                   제출 문서 13종 — 프론트 오너도 여기에 커밋한다
+├── docs/                   제출 문서 — 프론트 담당자도 여기에 커밋한다
 ├── worklog/<이름>/D##.md   전원의 하루 3줄 일지
 ├── tasks/                  be-* 티켓 (fe-* 티켓은 프론트 리포)
-├── onboarding/             팀원용 한 장 · backend.md
+├── onboarding/             팀원용 한 장 · backend.md · 역할별/BE-A~D.md
+├── seed-images/            시연용 사진을 넣는 곳 (README만 커밋)
+├── uploads/                업로드 저장소 (gitignore)
 ├── pom.xml
 └── src/main/
     ├── java/com/rookies6/udt/
     │   ├── common/         ErrorCode · BusinessException · Advice · ApiResponse   BE-A
-    │   ├── config/         CorsConfig(BE-A) · SecurityConfig(BE-B)
-    │   ├── entity/         9개 + enum 5                                          BE-A
+    │   ├── config/         CorsConfig · JpaAuditingConfig(BE-A) · SecurityConfig(BE-B)
+    │   ├── entity/         8개 + enum 5                                          BE-A
     │   ├── repository/     8개                                                   BE-A → 리소스 오너
-    │   ├── security/       JWT (비어 있음)                                        BE-B
-    │   ├── controller/     Product·Category(BE-C) · Auth(BE-B) · Transaction·Dispute(BE-D)
-    │   ├── service/        (비어 있음)
+    │   ├── controller/     Health · Category · Product(껍데기)  → Auth(BE-B) · Transaction·Dispute(BE-D)가 추가
     │   ├── dto/            리소스 접두어가 오너
-    │   └── admin/          Thymeleaf 컨트롤러 (비어 있음)                          BE-B
+    │   ├── security/       (아직 없음 — T-004 BE-B가 만든다)
+    │   ├── service/        (아직 없음 — 각 오너가 만든다)
+    │   └── admin/          (아직 없음 — T-018 BE-B가 만든다)
     └── resources/
-        ├── application*.yml · data.sql
-        └── templates/      layout · fragments · admin 2장
+        ├── application.yml · application-local.yml · application-prod.yml · data.sql
+        └── templates/      layout/base · fragments/nav · admin/login·products·disputes
 ```
 
 **패키지는 계층으로, 사람은 리소스 접두어로 나눈다.** `Product*` 다섯 파일이 한 사람 것이어야
 혼자 끝까지 만들고 발표에서 설명할 수 있다. B1~B3 검사가 `*Controller.java`·`*Service.java`
 **파일 이름**을 전제로 하므로 이름 규칙을 어기면 검사가 조용히 무동작한다.
+
+---
+
+## 무엇을 언제 하나
+
+| 보는 것                                                                   | 문서                                                 |
+| ------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **10일 전체 순서 · 날짜별 배정 · 저녁 체크포인트**                        | [`docs/참고/전체로드맵.md`](docs/참고/전체로드맵.md) |
+| **내 역할만 — 소유 파일 · 내 티켓을 단계별로 어떻게 · 내 함정 · 내 발표** | `onboarding/역할별/BE-*.md`                          |
+| 지금 잡을 티켓 (수용 기준까지)                                            | [`tasks/README.md`](tasks/README.md)                 |
+
+프론트 티켓은 프론트 리포 `tasks/`에. 아래는 D1 요약이고, D2 이후는 로드맵에 있다.
+
+| 담당 | D1 티켓                                               |
+| ---- | ----------------------------------------------------- |
+| BE-A | T-001 리포 셋업·전원 첫 기동 → T-002 엔티티·시드 확정 |
+| BE-B | T-004 JWT 발급·검증                                   |
+| BE-C | T-006 상품 목록·상세 실구현                           |
+| BE-D | T-009 거래 상태 머신                                  |
+
+**T-001이 모두의 선행이다.** 오전에 먼저 끝낸다.
+
+---
+
+## 제출 문서 (`docs/`)
+
+**목차: [`docs/README.md`](docs/README.md)**
+
+### 필수 제출 문서 5종
+
+| #   | 과제 항목                     | 파일                                    | 상태                               |
+| --- | ----------------------------- | --------------------------------------- | ---------------------------------- |
+| 1   | 도메인 설계서                 | `docs/01-도메인설계서.md`               | 작성 완료                          |
+| 2   | Entity 설계서                 | `docs/02-Entity설계서.md`               | **N+1 캡처(D7) 대기**              |
+| 3   | REST API 설계서               | `docs/03-REST-API설계서.md`             | **D4 실물 대조 후 확정**           |
+| 4   | 화면 설계서                   | `docs/04-화면설계서.md`                 | **와이어프레임(D3)·캡처(D8) 대기** |
+| 5   | React 컴포넌트와 Props 설계서 | `docs/05-React컴포넌트와Props설계서.md` | **D8 실물 재발췌**                 |
+
+### 그 외
+
+| 항목                                    | 위치                              | 상태          |
+| --------------------------------------- | --------------------------------- | ------------- |
+| 개인 회고록 7명분                       | `docs/회고록/` (양식 포함)        | D9            |
+| 발표 대본                               | `docs/참고/발표대본.md`           | 슬라이드는 D9 |
+| 기획서 · 아키텍처 · 역할분담 · 예상질문 | `docs/참고/`                      | 작성 완료     |
+| 일일 보고                               | `docs/참고/일일보고/` (양식 포함) | 매일          |
+
+**`[D#]` 표시가 있는 칸은 그 시점의 실제 산출물로 채운다.** 지금 채우면 없는 캡처와
+측정하지 않은 수치를 적게 된다.
 
 ---
 
@@ -117,13 +181,16 @@ main                정본
 
 ## 아직 비어 있는 것
 
-| 오너 | 채울 것 |
-|---|---|
-| BE-A | 엔티티 검토·보완 · 시드 조정 |
-| BE-B | `security/`(JwtTokenProvider·필터) · `SecurityConfig` **체인 2개** · `AuthController/Service` · `admin/` |
-| BE-C | `ProductService`·`WishService` · 이미지 업로드 · 검색·페이징 · **N+1 튜닝** |
-| BE-D | **`TransactionService`(상태 전이 단독 오너)** · `DisputeService` · 증빙 업로드/다운로드 |
+| 오너 | 채울 것                                                                                                                                                         |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BE-A | 엔티티 검토·보완 · 시드 조정                                                                                                                                    |
+| BE-B | `security/`(JwtTokenProvider·필터) · `AuthController/Service` · `UserDetailsService` · `admin/` — **`SecurityConfig` 체인 3개는 골격이 있다**(`// TODO(T-005)`) |
+| BE-C | `ProductService`·`WishService` · 이미지 업로드 · 검색·페이징 · **N+1 튜닝**                                                                                     |
+| BE-D | **`TransactionService`(상태 전이 단독 오너)** · `DisputeService` · 증빙 업로드/다운로드                                                                         |
 
+> **기동 직후 `check-api`는 9개 중 **7개**가 ok다 — RED 2개(`POST /api/auth/login (자격 오류)`·`로그인 → 토큰 → /api/me`)는 둘 다 `AuthController`가 없어서다** —
+> `AuthController`가 아직 없기 때문이고, T-004가 들어가면 채워진다. 7개보다 적으면 다른 문제다.
+>
 > `ProductController`·`CategoryController`는 **하드코딩 껍데기**다(`// TODO(T-006)` 표시).
 > URL과 응답 형태는 계약이므로 그대로 두고 **본문만** Service 연결로 바꾼다.
 > 이 껍데기 덕분에 D1부터 프론트 3명이 실서버 주소로 작업할 수 있다.

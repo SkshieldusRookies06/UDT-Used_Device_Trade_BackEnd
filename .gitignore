@@ -4,7 +4,8 @@ target/
 .env
 src/main/resources/application-secret.yml
 
-uploads/
+uploads/*
+!uploads/.gitkeep
 
 .idea/
 *.iml
@@ -12,3 +13,5 @@ uploads/
 .DS_Store
 
 *.log
+seed-images/*
+!seed-images/README.md

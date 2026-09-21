@@ -1,9 +1,16 @@
 -- 시드 · id를 명시하지 않는다 (시퀀스 충돌 → 첫 POST duplicate key)
 -- 비밀번호: 회원 Test1234! / 관리자 Admin1234!  (BCrypt strength 10)
+--
+-- 잔액은 아래 거래 4건이 이미 반영된 '현재 잔액'이다 (SPEC §2.4 BR-03·BR-05).
+--   buyer1  5,380,000 최초 → 거래 4건(1,290,000 + 890,000 + 520,000 + 680,000) 차감 → 2,000,000
+--   seller1 2,000,000 최초 → 구매확정된 1건(520,000)만 입금       → 2,520,000
+--   구매확정되지 않은 3건(2,860,000)은 에스크로에 묶여 있다 — 이게 이 서비스의 핵심이다
+-- 상품 이미지는 시드에 넣지 않는다. 따라서 시드 상품의 thumbnailUrl 은 전부 null 이고,
+-- 화면의 '이미지 없음' 경로가 첫날부터 실제로 검증된다. 실제 이미지는 T-007 등록으로 생긴다.
 
 INSERT INTO users (email, password, nickname, role, balance_krw, created_at) VALUES
   ('admin@udt.test',  '$2a$10$7B30C.Z.4zQsuf7b9xrG3uwsv6exRv5C2CUBwDhXBIKVaTb7IJ3Uq',  '관리자',   'ADMIN',  0,       NOW()),
-  ('seller1@udt.test','$2a$10$i01YpDmayKZMyujtk7a05edx5zza.eJGkemA.3JgCdyR3qtmdHSJO', '판매왕',   'MEMBER', 2000000, NOW()),
+  ('seller1@udt.test','$2a$10$i01YpDmayKZMyujtk7a05edx5zza.eJGkemA.3JgCdyR3qtmdHSJO', '판매왕',   'MEMBER', 2520000, NOW()),
   ('buyer1@udt.test', '$2a$10$i01YpDmayKZMyujtk7a05edx5zza.eJGkemA.3JgCdyR3qtmdHSJO', '구매자',   'MEMBER', 2000000, NOW()),
   ('buyer2@udt.test', '$2a$10$i01YpDmayKZMyujtk7a05edx5zza.eJGkemA.3JgCdyR3qtmdHSJO', '알뜰구매', 'MEMBER', 300000,  NOW());
 
@@ -35,14 +42,39 @@ FROM (
 JOIN users u ON u.email = 'seller1@udt.test'
 JOIN categories c ON c.name = t.cat;
 
+-- 거래 4건을 위한 상품 4개 (거래 상태별 화면을 시드만으로 볼 수 있게 한다 · SCR-005)
 INSERT INTO products (seller_id, category_id, title, description, price_krw, condition_grade, status, created_at)
-SELECT u.id, c.id, '아이맥 24 M1', '거래 진행 중인 상품', 1290000, 'A', 'IN_TRADE', NOW()
-FROM users u JOIN categories c ON c.name = '기타' WHERE u.email = 'seller1@udt.test';
+SELECT u.id, c.id, t.title, t.description, t.price_krw, 'A', t.status, NOW()
+FROM (
+  SELECT '아이맥 24 M1'      AS title, '가상결제완료 상태 거래' AS description, 1290000 AS price_krw, 'IN_TRADE' AS status UNION ALL
+  SELECT '델 XPS 13 2023',       '배송중 상태 거래',              890000,           'IN_TRADE'            UNION ALL
+  SELECT '아이패드 미니 6',      '구매확정된 거래',               520000,           'SOLD'                UNION ALL
+  SELECT '갤럭시 Z플립5',        '분쟁 진행 중인 거래',           680000,           'IN_TRADE'
+) t
+JOIN users u ON u.email = 'seller1@udt.test'
+JOIN categories c ON c.name = '기타';
 
-INSERT INTO transactions (product_id, buyer_id, amount_krw, status, created_at)
-SELECT p.id, u.id, p.price_krw, 'PAID', NOW()
-FROM products p JOIN users u ON u.email = 'buyer1@udt.test'
-WHERE p.title = '아이맥 24 M1';
+INSERT INTO transactions (product_id, buyer_id, amount_krw, status, courier, tracking_no, confirmed_at, created_at)
+SELECT p.id, u.id, p.price_krw, 'PAID', NULL, NULL, NULL, NOW()
+FROM products p JOIN users u ON u.email = 'buyer1@udt.test' WHERE p.title = '아이맥 24 M1';
+
+INSERT INTO transactions (product_id, buyer_id, amount_krw, status, courier, tracking_no, confirmed_at, created_at)
+SELECT p.id, u.id, p.price_krw, 'SHIPPING', 'CJ대한통운', '123456789012', NULL, NOW()
+FROM products p JOIN users u ON u.email = 'buyer1@udt.test' WHERE p.title = '델 XPS 13 2023';
+
+INSERT INTO transactions (product_id, buyer_id, amount_krw, status, courier, tracking_no, confirmed_at, created_at)
+SELECT p.id, u.id, p.price_krw, 'CONFIRMED', 'CJ대한통운', '123456789013', NOW(), NOW()
+FROM products p JOIN users u ON u.email = 'buyer1@udt.test' WHERE p.title = '아이패드 미니 6';
+
+INSERT INTO transactions (product_id, buyer_id, amount_krw, status, courier, tracking_no, confirmed_at, created_at)
+SELECT p.id, u.id, p.price_krw, 'DISPUTED', 'CJ대한통운', '123456789014', NULL, NOW()
+FROM products p JOIN users u ON u.email = 'buyer1@udt.test' WHERE p.title = '갤럭시 Z플립5';
+
+-- 분쟁 1건 (OPEN) — 관리자 화면(T-018)과 거래 상세 분쟁 표시(T-017)가 이걸 본다
+INSERT INTO disputes (transaction_id, reporter_id, reason, status, admin_memo, resolved_at, created_at)
+SELECT tx.id, tx.buyer_id, '수령한 제품 액정에 멍이 있습니다. 사진 첨부합니다.', 'OPEN', NULL, NULL, NOW()
+FROM transactions tx JOIN products p ON p.id = tx.product_id
+WHERE p.title = '갤럭시 Z플립5';
 
 INSERT INTO wishes (user_id, product_id, created_at)
 SELECT u.id, p.id, NOW()

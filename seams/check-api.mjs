@@ -215,7 +215,9 @@ function checkIsoOffset(v, errs, label) {
   });
   if (login.down) errs.push(`서버 응답 없음: ${login.msg}`);
   else if (login.status !== 200) {
-    errs.push(`시드 계정 로그인 실패 상태 ${login.status} — 시드 비밀번호가 BCrypt 해시인가 (SPEC §6) · 계정은 SEED_EMAIL/SEED_PW 환경변수로 바꾼다`);
+    errs.push(login.status === 404
+      ? `로그인 엔드포인트가 없다 (404) — AuthController 미구현. T-005 전까지는 이 RED가 정상`
+      : `시드 계정 로그인 실패 상태 ${login.status} — 시드 비밀번호가 BCrypt 해시인가 (SPEC §6) · 계정은 SEED_EMAIL/SEED_PW 환경변수로 바꾼다`);
   } else {
     const d = envelope(login.body, errs) ?? {};
     if (typeof d.accessToken !== "string" || d.accessToken.length < 10)

@@ -10,7 +10,10 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        default_batch_fetch_size: 100
+        jdbc:
+          time_zone: Asia/Seoul
+    # default_batch_fetch_size 는 T-019(N+1 튜닝)에서 넣는다.
+    # 미리 넣으면 '개선 전' 쿼리 로그를 찍을 수 없다.
   servlet:
     multipart:
       max-file-size: 5MB

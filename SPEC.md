@@ -27,16 +27,16 @@
 | 응답 봉투 | 성공 `{"success":true,"data":…,"message":"…","timestamp":"…"}` · 목록은 `data.content[]` + `data.page{...}` · 에러 `{"success":false,"statusCode":404,"code":"…","message":"…","timestamp":"…"}` |
 | 에러 처리 | `@RestControllerAdvice` **한 곳** (`common/GlobalExceptionHandler`) |
 | 응답 객체 | **DTO만 · 엔티티 직접 반환 금지** · DTO 변환은 Service 안에서 |
-| API 호출 | axios 인스턴스 1개(`src/api/client.js`) · `timeout: 10000` · 인터셉터가 **`res.data.data`** 반환 · `success:false`면 `code`·`message`로 reject · `/api/auth/**`는 401 처리 제외 |
+| API 호출 | axios 인스턴스 1개(`src/api/client.js`) · `timeout: 10000` · 인터셉터가 **`res.data.data`** 반환 (**예외: `responseType: "blob"`이면 `res.data`** — 파일 다운로드) · `success:false`면 `code`·`message`로 reject · `/api/auth/**`는 401 처리 제외 |
 | 라우팅 | `react-router-dom` · 경로 문자열은 `src/routes.js` 상수에서만 |
 | 전역 상태 | **Zustand 스토어 2개까지** — `authStore`(토큰·사용자·`persist`) · `wishStore`(찜 id) · **필터·페이지는 URL 쿼리** |
 | 폼 검증 | HTML 기본 검증 + 제출 직전 함수 하나 · 검증 라이브러리 금지 · **정본은 백엔드 400** |
 | 화면 상태 | 화면마다 `loading`·`error` state — §3 화면 상태 계약의 네 상태와 1:1 |
 | 스타일 | **CSS Modules**(`<컴포넌트>.module.css`) + `styles/tokens.css` 1파일 · 색·간격 리터럴 금지 |
 | 반응형 | **뷰포트 3종** — 모바일 390 · 태블릿 768 · 데스크톱 1280 |
-| 공용 컴포넌트 | 첫날 `Button`·`Layout`·`LoadingSpinner` · 파일마다 `propTypes` (`prop-types` 패키지) |
+| 공용 컴포넌트 | 첫날 `Button`·`Layout`·`LoadingSpinner` · props를 받는 컴포넌트마다 `propTypes` (`prop-types` 패키지 · props 없는 페이지는 제외) |
 | 인증 전달 | `Authorization: Bearer <jwt>` + localStorage (`authStore` persist) |
-| 관리자 | Thymeleaf SSR · 세션 + `formLogin` + CSRF on · Security 체인 2개(§7) |
+| 관리자 | Thymeleaf SSR · 세션 + `formLogin` + CSRF on · Security 체인 3개(§7) |
 | seam 게이트 | `node seams/check-api.mjs [base_url]` (리포 루트에서) |
 | 프론트 env | `VITE_API_URL` **하나만** |
 | 페이지 인덱스 | **0-base 그대로** · `max-page-size=100` · 프론트는 표시만 +1 |
@@ -70,7 +70,11 @@
 ### 3. 명시적 비범위
 실시간 채팅 · 실제 PG 결제 · 소셜 로그인 · 이메일/알림 발송 · 비밀번호 재설정 ·
 무한 스크롤 · 다크모드 · 썸네일 자동 생성 · 추천 알고리즘 · 관리자 통계 대시보드 ·
-**배포**(ADR-07) · 관리자 권한 세분화(역할 2종으로 고정)
+**배포**(ADR-07) · 관리자 권한 세분화(역할 2종으로 고정) ·
+**거래 취소·상품 철회·자동 확정 타임아웃** — 상태 머신에 취소 전이를 두지 않는다.
+구매자가 되돌리고 싶으면 **분쟁 신고(BR-06)** 한 길만 있고, 판매자가 검수 중 상품을 빼고 싶으면
+관리자 반려(BR-02)를 요청한다. 전이를 하나 늘리면 SPEC·게이트·목·화면·문서가 같이 흔들리므로
+2주 범위에서는 **의도적으로 넣지 않는다**(D1 결정 · 발표 Q&A에서 그렇게 답한다)
 
 ### 4. 데이터·외부 연동
 **외부 API 없음.** 모든 데이터는 `data.sql` 시드 + 사용자 입력.
@@ -78,13 +82,14 @@
 상품 이미지 샘플은 팀이 직접 찍거나 무료 이미지 5~10장을 `seed-images/`에 둔다.
 
 ### 5. 기술 스택 · 개발 환경
-§0 표. 전원 확인: `java -version` · `node -v` · `(cd backend && ./mvnw -v)`의 Java version 줄 · MySQL 8 기동.
+§0 표. 전원 확인: `java -version` · `node -v` · 백엔드 리포에서 `./mvnw -v`의 Java version 줄 ·
+**MariaDB 기동 + §6.1 확인 절차**(`SELECT VERSION(); SELECT @@port;`). **MySQL이 아니다** — ADR-11.
 **JDK는 17 이상이면 된다**(`pom.xml`의 `<java.version>17</java.version>`은 컴파일 타깃이라 JDK 21·24에서도 빌드된다).
 다만 팀원마다 메이저가 다르면 "제 로컬에선 됩니다"가 생기므로 D1에 하나로 맞춘다.
 
 ### 6. 역할·오너십
 **7명 — 백엔드 4(BE-A~D) / 프론트 3(FE-A~C).** 조는 **둘**, 팀 층 seam은 **API 하나**.
-상세는 `docs/03-역할분담.md`.
+상세는 `docs/참고/역할분담.md`.
 
 ### 7. 화면 목록 (§3) — 사용자 7종 + 관리자 3종. **이 목록에 없는 화면은 만들지 않는다.**
 
@@ -110,7 +115,7 @@
 | `MEMBER` | 판매자·구매자 겸용. 상품 등록·구매·찜·분쟁 신고 |
 | `ADMIN` | 상품 검수 승인/반려 · 분쟁 강제 환불/확정. **관리자 화면(Thymeleaf)에서만 활동** |
 
-### 2.2 엔티티 (9개)
+### 2.2 엔티티 (구현 8개 + `Review` P2)
 
 | 엔티티 | 관계 | 비고 |
 |---|---|---|
@@ -166,7 +171,11 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 ### 2.5 상태 변경 코드는 한 곳에만 둔다 (MUST)
 
 **`TransactionService`(오너 BE-D)의 메서드만** Transaction·Product 상태를 바꾼다.
-분쟁·관리자 기능(BE-B)과 상품 기능(BE-C)은 그 메서드를 **호출만 한다.** 이 규칙이 없으면 상태 변경 코드가
+분쟁·관리자 기능(BE-B)과 상품 기능(BE-C)은 그 메서드를 **호출만 한다.**
+
+**BR-01·BR-02(검수 승인/반려)도 예외가 아니다.** Product 상태를 바꾸므로 구현은
+`TransactionService.approveInspection(productId)` · `rejectInspection(productId, reason)`
+**(오너 BE-D · T-009 범위)** 에 두고, 관리자 화면(BE-B · T-018)은 이 둘을 **호출만** 한다. 이 규칙이 없으면 상태 변경 코드가
 세 군데로 흩어져 D8에 "왜 상품이 판매중인데 거래가 있지"가 나온다.
 
 ### 2.6 도메인 예외 (전부 `BusinessException` + `ErrorCode`)
@@ -192,11 +201,11 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | SCR-001 | `/` | 상품 목록 (검색·카테고리·페이징) | 공개 | FE-B |
 | SCR-002 | `/products/:id` | 상품 상세 (이미지·찜·구매) | 공개(구매는 로그인) | FE-B |
 | SCR-003 | `/products/new` | 상품 등록 (이미지 다중 업로드) | 로그인 | FE-B |
-| SCR-004 | `/mypage` | 마이페이지 (판매/구매/찜 탭 · 잔액) | 로그인 | FE-C |
+| SCR-004 | `/mypage` | 마이페이지 (내 상품/판매/구매/찜 4탭 · 잔액) | 로그인 | FE-C |
 | SCR-005 | `/transactions/:id` | 거래 상세 (상태별 액션) | 로그인(당사자만) | FE-C |
 | SCR-006 | `/login` | 로그인 | 공개 | FE-A |
 | SCR-007 | `/signup` | 회원가입 | 공개 | FE-A |
-| — | `*` | NotFound + 라우트 `errorElement` | — | FE-A |
+| SCR-008 | `*` | NotFound + 라우트 `errorElement` | — | FE-A |
 
 ### 3.2 관리자 화면 (Thymeleaf SSR · 3종 · 담당 BE-B)
 
@@ -260,7 +269,8 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `/api/transactions/{id}/shipping` | PATCH | 판매자 | BE-D | SCR-005 |
 | `/api/transactions/{id}/confirm` | PATCH | 구매자 | BE-D | SCR-005 |
 | `/api/transactions/{id}/disputes` | POST (multipart) | 구매자 | BE-D | SCR-005 |
-| `/api/disputes/{id}/files/{fileId}` | GET | 당사자·ADMIN | BE-D | SCR-005 · 관리자 |
+| `/api/disputes/{id}/files/{fileId}` | GET | 당사자(JWT) | BE-D | SCR-005 |
+| `/admin/disputes/{id}/files/{fileId}` | GET | ADMIN(세션) | BE-D | 관리자 화면 |
 
 > 관리자 `/admin/**`은 **seam이 아니다** — 소비자가 브라우저 사람뿐이라 계약도 게이트도 없다.
 
@@ -311,7 +321,8 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | wishCount | int | Y | — | — | |
 | createdAt | str | Y | ISO8601 **오프셋 포함** | — | |
 
-에러: 400 `VALIDATION_ERROR`(size>100 등) · 500 `INTERNAL_SERVER_ERROR`
+에러: 400 `VALIDATION_ERROR`(`page`가 음수 등) · 500 `INTERNAL_SERVER_ERROR`
+- **`size`가 100을 넘으면 에러가 아니라 100으로 잘린다** — `max-page-size=100`(§0)이 스프링에서 조용히 절단한다
 
 ### 4.3 `GET /api/products/{id}`
 
@@ -340,10 +351,12 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 - 성공 **201** · `data` = Transaction 객체
 ```json
 {"id":"7","productId":"12","productTitle":"맥북 에어 M2 13인치",
- "buyerNickname":"구매자","sellerNickname":"판매왕","amountKrw":850000,
- "status":"PAID","courier":null,"trackingNo":null,
+ "buyerId":"2","sellerId":"5","buyerNickname":"구매자","sellerNickname":"판매왕",
+ "amountKrw":850000,"status":"PAID","courier":null,"trackingNo":null,
  "createdAt":"2026-09-22T15:00:00+09:00","confirmedAt":null}
 ```
+> **`buyerId`·`sellerId`(문자열)는 화면이 "내가 구매자인가 판매자인가"를 판정하는 유일한 근거다**
+> — SCR-005의 상태별 액션 버튼이 여기에 걸려 있다. 닉네임은 중복될 수 있으므로 판정에 쓰지 않는다.
 - 에러: 409 `PRODUCT_NOT_ON_SALE` · 400 `SELF_PURCHASE_NOT_ALLOWED` · 400 `INSUFFICIENT_BALANCE` · 401 · 404 `PRODUCT_NOT_FOUND`
 - **원자성(BR-03):** Product 상태 · Transaction 생성 · buyer 잔액이 한 트랜잭션. 하나라도 실패하면 전부 롤백.
 
@@ -414,6 +427,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `FILE_TYPE_NOT_ALLOWED` | 400 | 허용되지 않는 파일 형식입니다 |
 | `FILE_TOO_LARGE` | 400 | 파일 크기가 너무 큽니다 |
 | `FILE_COUNT_EXCEEDED` | 400 | 첨부 가능한 파일 수를 초과했습니다 |
+| `FILE_STORAGE_ERROR` | 500 | 파일을 저장하지 못했습니다 |
 
 **Advice가 최소로 잡을 스프링 예외 일곱:**
 400 — `MethodArgumentNotValidException` · `HttpMessageNotReadableException` ·
@@ -466,16 +480,22 @@ FLUSH PRIVILEGES;
 MariaDB의 비밀번호 계정은 기본이 `mysql_native_password`라 추가 설정이 필요 없다.
 `ErrorCode 1045 / SQLState 28000`이 뜨면 이 계정이 없거나 다른 서버에 붙은 것이다.
 
-- **시드 `data.sql`을 첫날 커밋한다.** 관리자 1 · 회원 3(잔액 200만원씩) · 카테고리 5 ·
-  상품 20(ON_SALE 15 · INSPECTING 3 · SOLD 2) · 거래 3(PAID·SHIPPING·CONFIRMED 각 1) ·
-  분쟁 1(OPEN). **id를 명시하지 않는다**(시퀀스 충돌 → 시연 중 첫 POST가 duplicate key).
+- **시드 `data.sql`을 첫날 커밋한다.** 관리자 1 · 회원 3 ·
+  **잔액은 시드 거래 4건이 반영된 현재 잔액이다**(BR-03·BR-05) — buyer1 200만원 ·
+  seller1 252만원(구매확정 1건만 입금) · **buyer2 30만원 — `INSUFFICIENT_BALANCE` 시연용**.
+  **시드 상품에는 이미지를 넣지 않는다** → `thumbnailUrl`이 전부 `null`이라 화면의
+  '이미지 없음' 경로가 첫날부터 검증된다. 실제 이미지는 T-007 등록으로 생긴다. · 카테고리 5 ·
+  상품 22(ON_SALE 15 · INSPECTING 3 · IN_TRADE 3 · SOLD 1) ·
+  거래 4(PAID · SHIPPING · CONFIRMED · DISPUTED 각 1) · 분쟁 1(OPEN) · 찜 2.
+  **거래 4종을 시드에 넣는 이유**: SCR-005의 상태별 액션을 백엔드 구현 전에도 확인할 수 있어야 한다.
+  **id를 명시하지 않는다**(시퀀스 충돌 → 시연 중 첫 POST가 duplicate key).
 - 비밀번호는 **BCrypt 해시**로 박는다(평문 시드는 로그인이 안 된다). 시연 계정 비밀번호는
   `README.md`에 적는다.
 - 로컬 DB는 각자 소유 → `ddl-auto: create` + 시드 재실행이 곧 리셋. **공유 개발 DB 없음.**
 
 ---
 
-## §7 Security 체인 2개 (하이브리드 · 이게 없으면 첫날 전부 401)
+## §7 Security 체인 3개 (하이브리드 — API·관리자·그 외 · 이게 없으면 첫날 전부 401)
 
 ```
 @Order(1)  /api/**   → stateless · JWT 필터 · CSRF off · CORS 적용
@@ -493,6 +513,13 @@ MariaDB의 비밀번호 계정은 기본이 `mysql_native_password`라 추가 �
   `CORS_ALLOWED_ORIGINS` 환경변수에서 읽는다 · `@CrossOrigin` 남발 금지 ·
   **Security 체인에도 같은 허용을 넣는다.** `127.0.0.1:5173`은 다른 origin이니
   "주소창은 localhost로만" 규칙으로 간다.
+
+---
+
+> **증빙 파일 다운로드가 경로 2개인 이유** — `/api/**`는 무상태 JWT라 브라우저 주소창 이동으로는
+> 인증되지 않는다. 그래서 **당사자(React)는 `/api/disputes/...`를 `Authorization` 헤더와 함께
+> blob으로 받아** 내려받고, **관리자(Thymeleaf·세션)는 `/admin/disputes/...`를 링크로** 누른다.
+> **두 경로 모두 오너는 BE-D**이며 파일 저장·권한 검사 코드는 한 벌을 공유한다.
 
 ---
 
