@@ -9,10 +9,11 @@
 전제: JDK 17 설치 — 확인: java -version 과 (cd backend && ./mvnw -v) 의 "Java version:" 줄이 같은가
       IDE가 쓰는 JDK는 별개다. 프로젝트 설정에서 한 번 더 확인
 전제: Lombok 쓰므로 IntelliJ에서 Enable annotation processing 켠다
-전제: MariaDB 기동 후 DB 생성
+전제: MariaDB 기동 · 포트 확인 · DB/계정 생성 (SPEC §6.1)
+      SELECT VERSION();                -- 10.x.x-MariaDB 인지 먼저 확인
       CREATE DATABASE udt DEFAULT CHARACTER SET utf8mb4;
-      CREATE USER 'udt'@'%' IDENTIFIED BY 'udt';
-      GRANT ALL ON udt.* TO 'udt'@'%';
+      CREATE USER 'udt'@'localhost' IDENTIFIED BY 'udt';
+      GRANT ALL PRIVILEGES ON udt.* TO 'udt'@'localhost';
 
 git clone <URL> && cd <repo>
 (cd backend && ./mvnw -q -DskipTests package)   ← Windows는 mvnw.cmd
@@ -59,7 +60,10 @@ git clone <URL> && cd <repo>
 |---|---|
 | `Web server failed to start. Port 8080 was already in use.` | 어제 실행이 살아 있다. 찾아서 Ctrl+C |
 | `Failed to configure a DataSource: 'url' attribute is not specified` | 프로파일이 안 붙었다. `-Dspring-boot.run.profiles=local` 확인 |
-| `Communications link failure` / `Connection refused` | MariaDB가 안 떠 있다 |
+| `Communications link failure` / `Connection refused` | DB 서버가 안 떠 있다 |
+| `Client does not support authentication protocol ... 'sha256_password'` (SQLState 08004) | **그 포트는 MariaDB가 아니라 MySQL이다.** MariaDB 확정 포트는 **3307** — 3306에 붙고 있으면 `DB_PORT`를 확인한다 (SPEC §6.1) |
+| `GSS-API authentication exception` · `Krb5LoginModule` · `ErrorCode 1045 / SQLState 28000` | 계정이 없거나 다른 서버에 붙었다. SPEC §6.1의 `CREATE USER` 를 **MariaDB에 접속한 상태에서** 실행했는지 확인 |
+| `Unable to determine Dialect without JDBC metadata` | 단독 원인이 아니다 — **위쪽 첫 WARN 줄**이 진짜 원인이다. 거기부터 읽는다 |
 | `Unknown database 'udt'` | DB를 안 만들었다. 0회차 전제 줄의 CREATE DATABASE |
 | `Access denied for user 'udt'@...` | 계정·권한을 안 만들었다. 0회차 전제 줄 |
 | `Table 'udt.products' doesn't exist` (기동 직후) | 시드가 DDL보다 먼저 돌았다 — `defer-datasource-initialization: true` 확인 (SPEC §0) |

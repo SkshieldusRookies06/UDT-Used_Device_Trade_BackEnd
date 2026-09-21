@@ -21,11 +21,25 @@ SK Shielders Rookies 6기 웹 팀 프로젝트 (7명 · 2주)
 
 ## 실행
 
+**DB는 MariaDB를 쓴다** — 드라이버도 `mariadb-java-client`다(SPEC ADR-11).
+**한 PC에 MySQL과 MariaDB가 같이 깔려 있으면 3306을 MySQL이 차지하는 일이 흔하다.**
+연결 전에 반드시 아래 0번을 먼저 한다.
+
 ```bash
-# 0. DB 준비 (최초 1회)
+# 0-a. 지금 붙은 서버가 MariaDB가 맞는지 (최초 1회 · SPEC §6.1)
+mysql -u root -p -e "SELECT VERSION(); SELECT @@port;"
+#   10.x.x-MariaDB → OK
+#   8.x.x          → MySQL이다. MariaDB 포트를 찾아 아래 -P 와 DB_PORT 에 넣는다
+#   Windows 포트 찾기: netstat -ano | findstr LISTENING | findstr :330
+#   (MySQL이 깔린 PC는 MariaDB가 3307을 잡는다 — 그래서 확정값이 3307이다)
+
+# 0-b. DB·계정 생성 (MariaDB에 접속한 상태에서 · 포트가 3306이 아니면 -P 3307 식으로)
 mysql -u root -p -e "CREATE DATABASE udt DEFAULT CHARACTER SET utf8mb4;
-  CREATE USER 'udt'@'%' IDENTIFIED BY 'udt';
-  GRANT ALL ON udt.* TO 'udt'@'%'; FLUSH PRIVILEGES;"
+  CREATE USER 'udt'@'localhost' IDENTIFIED BY 'udt';
+  GRANT ALL PRIVILEGES ON udt.* TO 'udt'@'localhost'; FLUSH PRIVILEGES;"
+
+# 포트가 3307이 아니면 기동할 때 DB_PORT 를 넘긴다 (확정값은 3307 · SPEC §0)
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=local -Dspring-boot.run.jvmArguments="-DDB_PORT=3306"
 
 # 1. 기동 — 스키마 생성 + 시드가 함께 돈다
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local

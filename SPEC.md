@@ -17,7 +17,7 @@
 |---|---|
 | 프론트 | React 18 + Vite (`npm create vite@latest -- --template react`) · `package-lock.json` 커밋 · Node LTS |
 | 백엔드 | Spring Boot 4.0.x + Java 17 · **Maven wrapper 커밋**(`./mvnw`로만 실행) |
-| DB | MariaDB 10.x · **각자 로컬** · DB명 `udt` · 포트 **3306** · 공유 개발 DB 없음 |
+| DB | **MariaDB 10.x** · 드라이버 `mariadb-java-client` · **각자 로컬** · DB명 `udt` · 계정 `udt/udt` · 포트 **3307**(다르면 `DB_PORT` 환경변수) · 공유 개발 DB 없음 (ADR-11) |
 | 포트 | 프론트 5173 (`server: { port: 5173, strictPort: true }`) · 백엔드 8080 |
 | JSON 키 | **camelCase** (Jackson 기본 — 변환 레이어 없음) |
 | DB 컬럼 | snake_case (JPA 매핑이 흡수 · 프론트는 DB를 모른다) |
@@ -44,7 +44,7 @@
 | 시드 | `spring.jpa.defer-datasource-initialization=true` · `spring.sql.init.mode=always`(local) / `never`(prod) · **`data.sql`은 id를 명시하지 않는다** |
 | `ddl-auto` | local `create` (+시드 재실행) · prod `validate` |
 | 파일 저장 | 로컬 디스크 `uploads/` (gitignore) · 이미지 최대 5장·5MB·jpg/png/webp |
-| **배포** | **비범위** — 배점표에 배포·URL 항목이 없다 (로컬 완결 모드 · ADR-07) |
+| **배포** | **범위 외** — 2주 기간에서 기능 완성도·문서화를 우선했다. 시연은 로컬 실행 (ADR-07) |
 
 ---
 
@@ -70,7 +70,7 @@
 ### 3. 명시적 비범위
 실시간 채팅 · 실제 PG 결제 · 소셜 로그인 · 이메일/알림 발송 · 비밀번호 재설정 ·
 무한 스크롤 · 다크모드 · 썸네일 자동 생성 · 추천 알고리즘 · 관리자 통계 대시보드 ·
-**배포**(배점 없음 — ADR-07) · 관리자 권한 세분화(역할 2종으로 고정)
+**배포**(ADR-07) · 관리자 권한 세분화(역할 2종으로 고정)
 
 ### 4. 데이터·외부 연동
 **외부 API 없음.** 모든 데이터는 `data.sql` 시드 + 사용자 입력.
@@ -78,7 +78,9 @@
 상품 이미지 샘플은 팀이 직접 찍거나 무료 이미지 5~10장을 `seed-images/`에 둔다.
 
 ### 5. 기술 스택 · 개발 환경
-§0 표. 전원 확인: `java -version` · `node -v` · `./gradlew -v`의 JVM 줄 · MariaDB 기동.
+§0 표. 전원 확인: `java -version` · `node -v` · `(cd backend && ./mvnw -v)`의 Java version 줄 · MySQL 8 기동.
+**JDK는 17 이상이면 된다**(`pom.xml`의 `<java.version>17</java.version>`은 컴파일 타깃이라 JDK 21·24에서도 빌드된다).
+다만 팀원마다 메이저가 다르면 "제 로컬에선 됩니다"가 생기므로 D1에 하나로 맞춘다.
 
 ### 6. 역할·오너십
 **7명 — 백엔드 4(BE-A~D) / 프론트 3(FE-A~C).** 조는 **둘**, 팀 층 seam은 **API 하나**.
@@ -87,7 +89,7 @@
 ### 7. 화면 목록 (§3) — 사용자 7종 + 관리자 3종. **이 목록에 없는 화면은 만들지 않는다.**
 
 ### 8. 인증
-**범위에 있음**(배점 5점). 이메일+비밀번호 1종 · BCrypt · JWT(사용자) / 세션 폼(관리자).
+**범위에 있음.** 이메일+비밀번호 1종 · BCrypt · JWT(사용자) / 세션 폼(관리자).
 회원가입은 일반 회원만. 관리자 계정은 시드에 1개 고정, 가입 화면 없음.
 
 ### 9. 환경
@@ -96,7 +98,7 @@
 ### OPEN
 - (확정) 팀 인원 **7명 — 백엔드 4 / 프론트 3**
 - `OPEN: D1` 서비스명 `UDT` 확정 여부 (대안: 안심거래, 체크딜)
-- `OPEN: D1 강사 확인` 개인 회고록이 배점 항목인지(제출물 목록에만 있음 → 일단 만든다)
+- `OPEN: D1 강사 확인` 개인 회고록의 제출 형식(제출물 목록에 있음 → 일단 만든다)
 
 ---
 
@@ -122,9 +124,10 @@
 | `DisputeFile` | Dispute N:1 | **1:N** · 증빙 파일(다운로드 대상) |
 | `Review` | Transaction **1:1** · writer/target N:1 | **P2 — D7 여유 시.** rating 1~5 |
 
-> `Review`는 배점 항목에 직접 걸려 있지 않다. D5 빈 칸 점검에서 빈 칸이 0일 때만 만든다.
+> `Review`는 핵심 거래 흐름(등록→검수→구매→확정→분쟁)에 필수가 아니다. **우선순위 P2** —
+> D5 중간 점검에서 상위 기능이 모두 끝났을 때만 착수한다.
 
-### 2.3 상태 머신 (트랜잭션·예외 배점 10점의 핵심)
+### 2.3 상태 머신 (이 서비스의 핵심)
 
 **Product.status**
 ```
@@ -433,6 +436,36 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `dispute_files` | id · dispute_id(FK) · stored_name · original_name · size_bytes | |
 | `reviews` (P2) | id · transaction_id(FK) · writer_id · target_id · rating · content | `uk_reviews_transaction` |
 
+### 6.1 DB 연결 전 확인 (MUST · 30초)
+
+MariaDB 클라이언트로 서버에 붙어 아래 둘을 본다. **`VERSION()`에 `MariaDB`가 없으면
+그 포트는 MariaDB가 아니다** — MySQL이 3306을 쓰고 있고 MariaDB는 다른 포트(3307 등)에 있다.
+
+```sql
+SELECT VERSION();   -- 10.x.x-MariaDB  → OK
+                    -- 8.x.x           → MySQL이다. MariaDB 포트를 찾아 DB_PORT 로 넘긴다
+SELECT @@port;      -- 이 값이 SPEC 확정값(3307)과 다르면 DB_PORT 로 넘긴다
+```
+
+**기본값이 3307인 이유:** MySQL이 이미 깔린 PC에서는 MariaDB 설치 관리자가 3306을 피해
+3307을 잡는다. 팀 확인 결과 실제 포트가 3307이었다. **3306에 붙으면 MySQL에 연결되어
+`sha256_password`(1차)나 `GSS-API ... 1045`(2차)로 끊긴다** — 둘 다 이 한 가지 원인이다.
+
+포트를 못 찾으면 Windows에서:
+`netstat -ano | findstr LISTENING | findstr :330` · 서비스 목록에서 `MariaDB` 항목 확인.
+
+DB·계정 생성(**MariaDB에 접속한 상태에서**):
+
+```sql
+CREATE DATABASE udt DEFAULT CHARACTER SET utf8mb4;
+CREATE USER 'udt'@'localhost' IDENTIFIED BY 'udt';
+GRANT ALL PRIVILEGES ON udt.* TO 'udt'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+MariaDB의 비밀번호 계정은 기본이 `mysql_native_password`라 추가 설정이 필요 없다.
+`ErrorCode 1045 / SQLState 28000`이 뜨면 이 계정이 없거나 다른 서버에 붙은 것이다.
+
 - **시드 `data.sql`을 첫날 커밋한다.** 관리자 1 · 회원 3(잔액 200만원씩) · 카테고리 5 ·
   상품 20(ON_SALE 15 · INSPECTING 3 · SOLD 2) · 거래 3(PAID·SHIPPING·CONFIRMED 각 1) ·
   분쟁 1(OPEN). **id를 명시하지 않는다**(시퀀스 충돌 → 시연 중 첫 POST가 duplicate key).
@@ -447,7 +480,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 ```
 @Order(1)  /api/**   → stateless · JWT 필터 · CSRF off · CORS 적용
                        401은 AuthenticationEntryPoint에서 JSON 공통 봉투로
-                       (기본값은 302 리다이렉트라 axios 인터셉터가 안 먹는다)
+                       (기본값은 302 리다이렉트라 axios 인터셉터가 발동하지 않는다)
 @Order(2)  /admin/** → 세션 · formLogin("/admin/login") · CSRF on · 403은 HTML
            그 외      → permitAll (정적 · /api/health · /api/products GET)
 ```
@@ -496,15 +529,16 @@ F3. 컴포넌트가 200줄을 넘으면 훅·유틸로 추출한다. 계층을 �
 | # | 결정 | 이유 |
 |---|---|---|
 | ADR-01 | 세션 대신 **JWT**(사용자 쪽) | 프론트가 5173, 백엔드가 8080으로 origin이 갈려 쿠키 `SameSite` 처리가 2주에 무겁다 |
-| ADR-02 | 관리자는 **세션 + Thymeleaf 폼 인증** | SSR 폼 처리가 배점 항목이고, CSRF·PRG가 자연스럽게 따라온다 |
+| ADR-02 | 관리자는 **세션 + Thymeleaf 폼 인증** | 관리자 화면은 폼 중심이고 SPA가 필요 없다. 세션 폼 인증을 쓰면 CSRF 토큰과 PRG 패턴이 프레임워크 기본으로 따라온다 |
 | ADR-03 | 결제 상태에 `결제대기`를 두지 않는다 | 가상 결제라 구매요청 = 즉시 `PAID`. 상태 하나를 줄여 상태 머신을 단순하게 |
 | ADR-04 | **상태 변경은 `TransactionService`에서만** | 분쟁·관리자 기능이 각자 상태를 바꾸면 불일치가 난다 |
 | ADR-05 | 정산을 별도 엔티티가 아니라 **`User.balanceKrw` 한 필드**로 | 에스크로의 본질(구매확정 전엔 판매자에게 안 들어감)을 상태 전이만으로 표현할 수 있다 |
 | ADR-06 | 상품 목록은 **`ON_SALE`만** 노출 | 검수 프로세스가 서비스의 핵심이라 미검수 상품이 목록에 있으면 안 된다 |
-| ADR-07 | **배포 비범위 (로컬 완결 모드)** | 배점표에 배포·URL 항목이 없다. 대신 D8 시연 PC 통합 + README 실행 3줄 |
+| ADR-07 | **배포는 범위 외** | 2주 기간에서 배포 파이프라인보다 기능 완성도와 문서화를 우선했다. 재현성은 D8 시연 PC 통합 + README 실행 3줄로 확보한다 |
 | ADR-08 | 에러 봉투에 템플릿에 없는 `success:false`·`code`를 얹는다 | 프론트 인터셉터가 `success` 하나로 분기하고, §5 에러 코드 표를 화면이 쓸 수 있다 |
 | ADR-09 | 페이지 인덱스 **0-base 유지** | 봉투의 `page.number`가 0-base. 한쪽만 1-base로 바꾸면 첫 화면이 빈 결과가 된다. 변환은 프론트 표시 한 곳에서만 |
-| ADR-10 | UI 라이브러리 없이 **CSS Modules + 토큰** | 배점표가 UI 라이브러리를 부르지 않는다. 학습 비용 0 |
+| ADR-10 | UI 라이브러리 없이 **CSS Modules + 디자인 토큰** | 화면이 7개로 적어 토큰 한 파일이면 일관성이 확보된다. 라이브러리 학습·커스터마이징 비용이 2주 안에 회수되지 않는다 |
+| ADR-11 | DB는 **MariaDB**로 통일하고 드라이버도 `mariadb-java-client` | 엔진과 드라이버가 어긋나면 인증 단계에서 끊긴다 — MariaDB 드라이버는 MySQL 8의 `sha256_password`를 지원하지 않는다(`SQLState 08004`). **한 PC에 MySQL과 MariaDB가 같이 깔려 있으면 3306을 MySQL이 차지하는 일이 흔하므로, 첫 연결 전에 §6.1 확인 절차를 돌린다** |
 
 ---
 
