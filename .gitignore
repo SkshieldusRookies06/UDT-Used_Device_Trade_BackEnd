@@ -1,0 +1,14 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+.env
+src/main/resources/application-secret.yml
+
+uploads/
+
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+*.log

@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: udt
+  profiles:
+    active: local
+  jackson:
+    time-zone: Asia/Seoul
+    default-property-inclusion: always
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 30MB
+  data:
+    web:
+      pageable:
+        default-page-size: 12
+        max-page-size: 100
+        one-indexed-parameters: false
+
+server:
+  port: ${PORT:8080}
+
+app:
+  upload-dir: ${UPLOAD_DIR:uploads}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  jwt:
+    secret: ${JWT_SECRET:udt-local-development-secret-key-change-me-32bytes}
+    expiration-seconds: 86400
