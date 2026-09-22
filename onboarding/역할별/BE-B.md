@@ -10,7 +10,7 @@
 
 ## 1. 한 줄로
 
-**로그인이 되면 게이트가 9/9가 된다.** 그게 D3의 첫 이정표고, 그때까지 팀 전체가 목 서버 위에서 산다.
+**로그인이 되면 게이트가 10/10가 된다.** 그게 D3의 첫 이정표고, 그때까지 팀 전체가 목 서버 위에서 산다.
 그리고 **관리자 화면(Thymeleaf)은 나 혼자만 만든다** — 서버 렌더링 화면이 이 프로젝트에 있다는 걸 보여 주는 게 내 파트다.
 
 ---
@@ -64,8 +64,8 @@
 
 | 티켓 | 언제 | 선행 | 끝났다는 증거 |
 |---|---|---|---|
-| [T-004 JWT 발급·검증](../../tasks/T-004-JWT-발급검증.md) | D1~D2 | T-001 | `./mvnw test` 통과 · 게이트 7/9 (login 관련 2개만 red)가 정상 |
-| [T-005 Security 완성·로그인 API](../../tasks/T-005-Security-완성.md) | **D3** | T-004 | **게이트 9/9 ok** ★ |
+| [T-004 JWT 발급·검증](../../tasks/T-004-JWT-발급검증.md) | D1~D2 | T-001 | 테스트 전체 통과(IntelliJ) · 게이트 8/10 (login 관련 2개만 red)가 정상 |
+| [T-005 Security 완성·로그인 API](../../tasks/T-005-Security-완성.md) | **D3** | T-004 | **게이트 10/10 ok** ★ |
 | [T-018 관리자 Thymeleaf](../../tasks/T-018-관리자-Thymeleaf.md) | D6~D7 | T-005 | 브라우저에서 검수 승인이 실제로 된다 |
 
 **T-005가 D3의 팀 이정표다.** 이게 green이 되는 순간 프론트가 목을 끄고 실서버로 옮긴다.
@@ -114,7 +114,7 @@ security/JwtTokenProvider.java
 
 합의한 내용을 `SPEC.md` §1 OPEN에 적고 BE-A에게 개정을 요청한다. **적기 전까지 그 합의는 무효다.**
 
-`확인:` `./mvnw test` 통과 · 게이트는 여전히 7/9 (login 관련 2개만 red · 아직 정상).
+`확인:` 테스트 전체 통과(IntelliJ) · 게이트는 여전히 8/10 (login 관련 2개만 red · 아직 정상).
 
 ---
 
@@ -167,7 +167,7 @@ curl -s localhost:8080/api/me -H "Authorization: Bearer $TOKEN" | jq
 node seams/check-api.mjs
 ```
 
-`확인:` **9/9 ok.** 이 순간 채널에 올린다 — "게이트 9/9입니다. 프론트는 목을 꺼도 됩니다."
+`확인:` **10/10 ok.** 이 순간 채널에 올린다 — "게이트 10/10입니다. 프론트는 목을 꺼도 됩니다."
 **이게 D3의 팀 이정표다.**
 
 ---
@@ -226,7 +226,7 @@ localhost:8080/admin  →  admin@udt.test / Admin1234!
 
 ```
 D1~D2  T-004 JWT 발급·검증
-D3   ★ T-005 Security 완성 · 로그인 API → 게이트 9/9 (팀 첫 이정표)
+D3   ★ T-005 Security 완성 · 로그인 API → 게이트 10/10 (팀 첫 이정표)
 D4   ★ 1차 통합 대응 — **인증이 가장 먼저 터진다. 이날은 다른 걸 잡지 않는다**
 D5     T-018 준비 (화면 2장 초안 · 폼 흐름 정리)
 D6~D7  T-018 관리자 화면 2장 + 폼 처리
@@ -255,9 +255,9 @@ D10    리허설
 
 ```bash
 # 기동
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 
-# 내 완료 증명 — T-005 끝나면 9/9 여야 한다
+# 내 완료 증명 — T-005 끝나면 10/10 여야 한다
 node seams/check-api.mjs
 
 # 로그인 직접 확인

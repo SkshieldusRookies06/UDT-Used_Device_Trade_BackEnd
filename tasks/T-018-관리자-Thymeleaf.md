@@ -5,7 +5,8 @@
 ## [배경]
 
 `resources/templates/`에 **레이아웃·프래그먼트·화면 2장이 이미 있다**.
-컨트롤러(`admin/` 패키지)만 만들면 된다.
+컨트롤러(`admin/` 패키지)만 만들면 된다. **`admin/AdminLoginController`(GET `/admin/login` 한 줄)는 골격에 이미 있다** —
+로그인 화면이 첫날부터 열리게 하기 위해서다. 검수·분쟁 컨트롤러를 그 옆에 추가한다.
 
 ```
 templates/layout/base.html      공통 레이아웃 (th:fragment)

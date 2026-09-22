@@ -49,11 +49,10 @@ mysql -u root -p -e "CREATE DATABASE udt DEFAULT CHARACTER SET utf8mb4;
   CREATE USER 'udt'@'localhost' IDENTIFIED BY 'udt';
   GRANT ALL PRIVILEGES ON udt.* TO 'udt'@'localhost'; FLUSH PRIVILEGES;"
 
-# 포트가 3307이 아니면 기동할 때 DB_PORT 를 넘긴다 (확정값은 3307 · SPEC §0)
-#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=local -Dspring-boot.run.jvmArguments="-DDB_PORT=3306"
-
-# 1. 기동 — 스키마 생성 + 시드가 함께 돈다
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+# 1. 기동 — IntelliJ에서 프로젝트를 연 뒤 (스키마 생성 + 시드가 함께 돈다)
+#    Run/Debug Configurations → UdtApplication → Active profiles: local → ▶
+#    포트가 3307이 아니면 같은 화면의 VM options 에  -DDB_PORT=3306  (확정값은 3307 · SPEC §0)
+#    IDE 없이 돌릴 때만:  mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local  (래퍼는 선택 · 아래 "첫 빌드 전에")
 
 # 2. 계약 게이트
 node seams/check-api.mjs
@@ -120,6 +119,7 @@ UDT-Used_Device_Trade-backend/
 | **10일 전체 순서 · 날짜별 배정 · 저녁 체크포인트** | [`docs/참고/전체로드맵.md`](docs/참고/전체로드맵.md) |
 | **내 역할만 — 소유 파일 · 내 티켓을 단계별로 어떻게 · 내 함정 · 내 발표** | `onboarding/역할별/BE-*.md` |
 | 지금 잡을 티켓 (수용 기준까지) | [`tasks/README.md`](tasks/README.md) |
+| 브랜치 · 커밋 · PR · 머지 · 충돌 (두 리포 공통) | [`docs/참고/GitHub규약.md`](docs/참고/GitHub규약.md) |
 
 프론트 티켓은 프론트 리포 `tasks/`에. 아래는 D1 요약이고, D2 이후는 로드맵에 있다.
 
@@ -175,6 +175,9 @@ main                정본
 **계약을 바꿀 때는 티켓 번호로 두 리포의 커밋을 짝 짓는다** — `SPEC.md` §12.
 **backend를 먼저 머지한다.**
 
+> 위는 요약이다. **브랜치 → 커밋 → PR → 머지 → 충돌** 전체 규칙과 PR 템플릿 사용법은
+> [`docs/참고/GitHub규약.md`](docs/참고/GitHub규약.md) — `main`에는 PR 없이 들어가지 않는다.
+
 ---
 
 ## 아직 비어 있는 것
@@ -186,8 +189,8 @@ main                정본
 | BE-C | `ProductService`·`WishService` · 이미지 업로드 · 검색·페이징 · **N+1 튜닝** |
 | BE-D | **`TransactionService`(상태 전이 단독 오너 · BR-01~08 + `markDisputed`)** · `TransactionController` · 거래 테스트·게이트 확장(T-022) |
 
-> **기동 직후 `check-api`는 9개 중 7개가 ok다.** RED 2개(`POST /api/auth/login (자격 오류)` · `로그인 → 토큰 → /api/me`)는
-> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 9/9가 된다. 7개보다 적으면 다른 문제다.
+> **기동 직후 `check-api`는 10개 중 8개가 ok다.** RED 2개(`POST /api/auth/login (자격 오류)` · `로그인 → 토큰 → /api/me`)는
+> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 10/10가 된다. 8개보다 적으면 다른 문제다.
 >
 > `ProductController`·`CategoryController`는 **하드코딩 껍데기**다(`// TODO(T-006)` 표시).
 > URL과 응답 형태는 계약이므로 그대로 두고 **본문만** Service 연결로 바꾼다.
@@ -195,10 +198,12 @@ main                정본
 
 ## 첫 빌드 전에
 
-1. **Maven 래퍼가 없다.** 수업 리포(`SpringBoot4_Basic_Project`)의 `mvnw`·`mvnw.cmd`·`.mvn/`을
-   이 리포 루트로 복사하거나, IntelliJ에서 Maven 프로젝트로 열면 된다.
+1. **실행은 IntelliJ가 표준이다.** 폴더를 열면 `pom.xml`을 Maven 프로젝트로 인식한다(안 되면 `pom.xml` 우클릭 → Add as Maven Project).
+   **Maven 래퍼(`mvnw`·`.mvn/`)는 일부러 없다** — 필요해지면(IDE 없이 터미널 빌드 확인 · 평가자 빌드) 수업 리포
+   `SpringBoot4_Basic_Project`의 `mvnw`·`mvnw.cmd`·**`.mvn/` 폴더째** 복사하면 된다. `.mvn/wrapper/`가 빠지면
+   `Cannot start maven from wrapper`가 난다. D8~D9 여유 있을 때 넣어도 늦지 않다.
 2. **Spring Boot `4.0.8` / Java 17**로 잡아 뒀다(수업과 동일). 다르면 `pom.xml`의 parent
    `<version>` 한 줄만 바꾼다. Lombok을 쓰므로 IntelliJ **Enable annotation processing**을 켠다.
 3. **컴파일·기동은 검증됐다** — 2026-09-22 Windows · JDK 24 · IntelliJ · MariaDB 10.11.18(3307)에서
-   `Started UdtApplication` · 테이블 8개 생성 · 게이트 7/9 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
+   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/10 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
    `@Primary`로 잡았다(`onboarding/backend.md` 에러 색인).

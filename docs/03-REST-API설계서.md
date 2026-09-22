@@ -130,9 +130,13 @@
   "statusCode": 409,
   "code": "PRODUCT_NOT_ON_SALE",
   "message": "판매 중인 상품이 아닙니다",
+  "fields": null,
   "timestamp": "2026-09-22T14:03:00+09:00"
 }
 ```
+
+`fields`는 **항상 있는 키**다 — 검증 에러(`VALIDATION_ERROR`)만 배열이고 나머지는 `null`.
+Security 필터가 내는 401도 같은 `ErrorResponse`를 직렬화하므로 키 집합이 같다.
 
 검증 실패 시에는 `fields` 배열이 추가된다.
 
@@ -263,8 +267,8 @@ POST /api/auth/login
 
 **GET /api/products/{id}**
 
-`data`는 **객체**(배열 아님). 위 필드 + `description` · `sellerId` · `wished`(boolean) ·
-`images`(**배열 · 0장이면 `[]`**) · `updatedAt`.
+`data`는 **객체**(배열 아님). 위 필드에서 **`thumbnailUrl`을 빼고** + `description` · `sellerId` · `wished`(boolean) ·
+`images`(**배열 · 0장이면 `[]`**) · `updatedAt`(ISO8601 오프셋 · null 불가).
 `images[]` 원소: `{ "id", "url", "sortOrder" }`
 
 에러: 404 `PRODUCT_NOT_FOUND` · **400 `VALIDATION_ERROR`(형식이 잘못된 id)**
@@ -373,6 +377,7 @@ POST /api/auth/login
 | `AUTHENTICATION_REQUIRED` | 401 | 로그인이 필요합니다 |
 | `ACCESS_DENIED` | 403 | 접근 권한이 없습니다 |
 | `INTERNAL_SERVER_ERROR` | 500 | 서버 오류가 발생했습니다 |
+| `RESOURCE_NOT_FOUND` | 404 | 요청한 경로를 찾을 수 없습니다 |
 
 ### 5.2 비즈니스 에러 코드
 

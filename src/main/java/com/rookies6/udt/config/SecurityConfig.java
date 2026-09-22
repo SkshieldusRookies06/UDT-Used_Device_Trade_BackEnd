@@ -2,8 +2,10 @@ package com.rookies6.udt.config;
 
 // TODO(T-005) BE-B — 체인 골격만. JWT 필터·UserDetailsService 연결이 남아 있다 (SPEC §7)
 
+import com.rookies6.udt.common.ErrorCode;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -77,14 +79,16 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // ErrorResponse와 키 집합을 똑같이 맞춘다 (success·statusCode·code·message·fields·timestamp).
+    // 필터 계층이라 MVC 메시지 컨버터가 없어 직접 쓴다 — Boot 4는 Jackson 3라 ObjectMapper 주입을 피한다.
     private AuthenticationEntryPoint jsonAuthenticationEntryPoint() {
         return (request, response, authException) -> {
+            ErrorCode code = ErrorCode.AUTHENTICATION_REQUIRED;
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(
-                    "{\"success\":false,\"statusCode\":401,\"code\":\"AUTHENTICATION_REQUIRED\","
-                            + "\"message\":\"로그인이 필요합니다\",\"timestamp\":\""
-                            + OffsetDateTime.now() + "\"}");
+            response.getWriter().write("{\"success\":false,\"statusCode\":401,\"code\":\"" + code.name()
+                    + "\",\"message\":\"" + code.getMessage() + "\",\"fields\":null,\"timestamp\":\""
+                    + OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) + "\"}");
         };
     }
 }

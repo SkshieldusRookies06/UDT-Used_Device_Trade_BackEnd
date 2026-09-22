@@ -16,11 +16,11 @@
 
 ## 명령
 ```
-실행     ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
-테스트   ./mvnw test
+실행     IntelliJ ▶ UdtApplication (Active profiles: local)   — Maven 래퍼 없음
+테스트   IntelliJ src/test → Run 'All Tests'
 게이트   node seams/check-api.mjs
 목 서버  node mock/server.mjs
-커밋     feat|fix|docs|chore(<범위>): 한 줄 [T-###]
+커밋     feat|fix|docs|refactor|chore|test(<범위>): 한 줄 [T-###]   (규약: docs/참고/GitHub규약.md)
 ```
 
 ## 금지

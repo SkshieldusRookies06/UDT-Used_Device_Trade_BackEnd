@@ -334,6 +334,7 @@ public abstract class BaseEntity {
 | status | ENUM | N | 5종 |
 | reject_reason | VARCHAR(200) | Y | |
 | created_at | DATETIME(6) | N | |
+| updated_at | DATETIME(6) | N | `@LastModifiedDate` — Product에만 둔다(상세 응답 `updatedAt`) |
 
 #### transactions
 
@@ -431,7 +432,7 @@ public abstract class BaseEntity {
 ## 10. 테스트 전략
 
 - **계약 검증 스크립트**가 Repository·Service 동작을 API 레벨에서 간접 검증한다
-  (`node seams/check-api.mjs` — 9개 검사).
+  (`node seams/check-api.mjs` — 10개 검사).
 - `[D7] @DataJpaTest — 고유 제약 위반 · 연관관계 매핑 확인 (여유 시)`
 
 ---
