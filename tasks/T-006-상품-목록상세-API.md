@@ -25,7 +25,8 @@ GET /api/products?q=&categoryId=&page=0&size=12
 
 ```
 GET /api/products/{id}
-  · data 는 객체(배열 아님). 위 필드 + description · sellerId · wished · images[] · updatedAt
+  · data 는 객체(배열 아님). 위 필드에서 thumbnailUrl 을 빼고 + description · sellerId · wished · images[] · updatedAt
+  · updatedAt 은 products.updated_at(@LastModifiedDate · Product 엔티티에 이미 있다) — null 이면 게이트 red
   · images 는 0장이어도 [] — null 금지
   · 404 PRODUCT_NOT_FOUND · 400 VALIDATION_ERROR(형식 불량 id)
 GET /api/categories → data 는 배열

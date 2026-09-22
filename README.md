@@ -189,8 +189,8 @@ main                정본
 | BE-C | `ProductService`·`WishService` · 이미지 업로드 · 검색·페이징 · **N+1 튜닝** |
 | BE-D | **`TransactionService`(상태 전이 단독 오너 · BR-01~08 + `markDisputed`)** · `TransactionController` · 거래 테스트·게이트 확장(T-022) |
 
-> **기동 직후 `check-api`는 9개 중 7개가 ok다.** RED 2개(`POST /api/auth/login (자격 오류)` · `로그인 → 토큰 → /api/me`)는
-> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 9/9가 된다. 7개보다 적으면 다른 문제다.
+> **기동 직후 `check-api`는 10개 중 8개가 ok다.** RED 2개(`POST /api/auth/login (자격 오류)` · `로그인 → 토큰 → /api/me`)는
+> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 10/10가 된다. 7개보다 적으면 다른 문제다.
 >
 > `ProductController`·`CategoryController`는 **하드코딩 껍데기**다(`// TODO(T-006)` 표시).
 > URL과 응답 형태는 계약이므로 그대로 두고 **본문만** Service 연결로 바꾼다.
@@ -205,5 +205,5 @@ main                정본
 2. **Spring Boot `4.0.8` / Java 17**로 잡아 뒀다(수업과 동일). 다르면 `pom.xml`의 parent
    `<version>` 한 줄만 바꾼다. Lombok을 쓰므로 IntelliJ **Enable annotation processing**을 켠다.
 3. **컴파일·기동은 검증됐다** — 2026-09-22 Windows · JDK 24 · IntelliJ · MariaDB 10.11.18(3307)에서
-   `Started UdtApplication` · 테이블 8개 생성 · 게이트 7/9 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
+   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/10 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
    `@Primary`로 잡았다(`onboarding/backend.md` 에러 색인).

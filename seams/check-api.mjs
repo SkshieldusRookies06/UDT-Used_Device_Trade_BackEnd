@@ -23,7 +23,8 @@ function envelope(body, errs) {
 
 function errorShape(body) {
   return body && body.success === false
-    && typeof body.code === "string" && typeof body.statusCode === "number";
+    && typeof body.code === "string" && typeof body.statusCode === "number"
+    && typeof body.message === "string" && "fields" in body && typeof body.timestamp === "string";
 }
 
 function checkPage(pg, errs, expectedNumber) {
@@ -134,6 +135,19 @@ function checkIsoOffset(v, errs, label) {
   report.push(["GET /api/products (size 상한)", errs]);
 }
 
+// ── GET /api/products?page=-1 (음수 page → 400) ───────────────────────────
+{
+  const errs = [];
+  const r = await call("/api/products?page=-1&size=12");
+  if (r.down) errs.push(`서버 응답 없음: ${r.msg}`);
+  else if (r.status !== 400) errs.push(`음수 page 상태 ${r.status} (계약 §4.2: 400 VALIDATION_ERROR · Pageable 바인딩은 0으로 조용히 고쳐 200을 낸다 · PageRequest.of 는 500)`);
+  else {
+    if (!errorShape(r.body)) errs.push(`에러 바디가 공통 봉투 아님: ${JSON.stringify(r.body)}`);
+    else if (r.body.code !== "VALIDATION_ERROR") errs.push(`code=${r.body.code} (계약: VALIDATION_ERROR)`);
+  }
+  report.push(["GET /api/products (음수 page)", errs]);
+}
+
 // ── GET /api/products/{id} 상세 + 에러 ────────────────────────────────────
 {
   const errs = [];
@@ -150,6 +164,9 @@ function checkIsoOffset(v, errs, label) {
                       ["sellerId", "string"], ["wished", "boolean"]], errs, "productDetail");
       if (!Array.isArray(d.images)) errs.push(`images가 배열이 아님: ${JSON.stringify(d.images)} (0장이면 [])`);
       checkIsoOffset(d.createdAt, errs, "createdAt");
+      if (d.updatedAt == null) errs.push("updatedAt 없음 또는 null (계약 §4.3: products.updated_at · @LastModifiedDate)");
+      else checkIsoOffset(d.updatedAt, errs, "updatedAt");
+      if ("thumbnailUrl" in d) errs.push("상세에 thumbnailUrl 있음 (계약 §4.3: 상세는 images[]만 · thumbnailUrl 제외)");
     }
   } else errs.push("상세 검사 건너뜀 — 목록이 비어 있다");
 

@@ -224,10 +224,10 @@ curl -s "localhost:8080/api/products?page=0&size=12" > /dev/null
 **6) 로그 레벨을 원래대로 돌리고 응답이 안 바뀌었는지 확인한다**
 
 ```bash
-node seams/check-api.mjs   # 9/9 유지
+node seams/check-api.mjs   # 10/10 유지
 ```
 
-`확인:` 캡처 2장 + 숫자 2개 + 게이트 9/9. **API 응답은 한 글자도 바뀌지 않았다.**
+`확인:` 캡처 2장 + 숫자 2개 + 게이트 10/10. **API 응답은 한 글자도 바뀌지 않았다.**
 
 ---
 

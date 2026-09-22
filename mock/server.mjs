@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 
 const now = () => new Date().toLocaleString("sv", { timeZone: "Asia/Seoul" }).replace(" ", "T") + "+09:00";
 const ok = (data, message) => JSON.stringify({ success: true, data, message, timestamp: now() });
-const err = (statusCode, code, message) => JSON.stringify({ success: false, statusCode, code, message, timestamp: now() });
+const err = (statusCode, code, message, fields = null) => JSON.stringify({ success: false, statusCode, code, message, fields, timestamp: now() });
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -79,7 +79,10 @@ createServer(async (req, res) => {
 
   if (p === "/api/products" && m === "GET") {
     const empty = url.searchParams.get("q") === "__none__";
-    const size = Math.min(Number(url.searchParams.get("size") ?? 12), 100);
+    const pageNo = Number(url.searchParams.get("page") ?? 0);
+    const rawSize = Number(url.searchParams.get("size") ?? 12);
+    if (pageNo < 0 || rawSize < 1) return send(400, err(400, "VALIDATION_ERROR", "입력값을 확인해 주세요"));
+    const size = Math.min(rawSize, 100);
     const content = empty ? [] : [product(12)];
     return send(200, ok({
       content,
@@ -122,7 +125,8 @@ createServer(async (req, res) => {
   if (/^\/api\/products\/\d+$/.test(p) && m === "GET") {
     const id = p.split("/")[3];
     if (id === "999999999") return send(404, err(404, "PRODUCT_NOT_FOUND", "상품을 찾을 수 없습니다"));
-    return send(200, ok({ ...product(id), description: "설명", sellerId: "5", wished: wished.has(id),
+    const { thumbnailUrl: _omit, ...base } = product(id);
+    return send(200, ok({ ...base, description: "설명", sellerId: "5", wished: wished.has(id),
                           images: [{ id: "31", url: `/api/products/${id}/images/31`, sortOrder: 0 }],
                           updatedAt: now() }, "조회 완료"));
   }
@@ -179,7 +183,7 @@ createServer(async (req, res) => {
     return send(200, ok(emptyPage, "조회 완료"));
   }
 
-  send(404, err(404, "PRODUCT_NOT_FOUND", `목 서버가 구현하지 않은 경로입니다: ${m} ${p}`));
+  send(404, err(404, "RESOURCE_NOT_FOUND", `목 서버가 구현하지 않은 경로입니다: ${m} ${p}`));
 }).listen(8080)
   .on("listening", () => console.log("목 서버 기동 — http://localhost:8080 (Ctrl+C 로 종료)"))
   .on("error", (e) => {

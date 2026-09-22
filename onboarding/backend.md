@@ -96,7 +96,7 @@ Run/Debug Configurations → UdtApplication → Active profiles: local
 | `Whitelabel Error Page` (브라우저에) | REST 경로면 `@RestController` 확인 · `/admin` 경로면 템플릿 파일명·`templates/` 경로 확인 |
 | Security 넣자마자 **모든 API가 401** | permitAll 경로와 CORS를 **Security 체인 안에** 명시했는가 (SPEC §7) |
 | `Using generated security password: ...` (기동 로그) | `SecurityFilterChain`은 있지만 `UserDetailsService`가 아직 없다. T-005에서 DB 사용자로 교체하면 이 줄이 사라진다. **그 전까지 `/admin` 로그인은 아이디 `user` + 이 생성 비밀번호**로 된다 |
-| check-api가 **9개 중 7개 ok** (RED 2개) | RED는 `POST /api/auth/login (자격 오류)`와 `로그인 → 토큰 → /api/me` — 둘 다 `AuthController`가 없어서다(T-004·T-005). **7/9면 정상 진행 중**이고, T-005가 끝나면 9/9가 된다 |
+| check-api가 **10개 중 8개 ok** (RED 2개) | RED는 `POST /api/auth/login (자격 오류)`와 `로그인 → 토큰 → /api/me` — 둘 다 `AuthController`가 없어서다(T-004·T-005). **8/10면 정상 진행 중**이고, T-005가 끝나면 10/10가 된다 |
 | `required a single bean, but 2 were found: corsConfigurationSource, mvcHandlerMappingIntrospector` | Spring MVC가 만드는 `HandlerMappingIntrospector`도 `CorsConfigurationSource`다. 우리 빈에 `@Primary`가 빠지면 둘 중 못 고른다 | `CorsConfig`의 빈에 `@Primary` (스캐폴드에 이미 있음 — 지웠으면 복구) |
 | `LazyInitializationException: could not initialize proxy` | `open-in-view: false`라 **트랜잭션 밖에서 연관 엔티티를 건드렸다.** 대개 Controller에서 DTO 변환을 했거나, Service 메서드에 `@Transactional`이 없다 | DTO 변환을 Service 안(`@Transactional`)으로 옮긴다. 규약 B2 |
 | 테스트 실행이 컨텍스트 로딩에서 죽는다 | `@SpringBootTest`는 **MariaDB가 떠 있어야** 돈다 | 테스트 전에 DB를 켠다. 순수 로직 테스트는 `@SpringBootTest` 없이 짠다 |

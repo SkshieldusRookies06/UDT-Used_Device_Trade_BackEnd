@@ -36,7 +36,7 @@ GET  /api/me            200  data = {id, email, nickname, role, balanceKrw} · 4
 - [ ] `AuthController` · `AuthService` — signup · login · me
 - [ ] 기동 로그에서 **`Using generated security password:` 줄이 사라진다**
 - [ ] 관리자 컨트롤러용 `@PreAuthorize("hasRole('ADMIN')")` 가 동작한다 (T-018에서 사용)
-- [ ] **`node seams/check-api.mjs` 가 9개 전부 ok** ← 이 티켓의 완료 신호
+- [ ] **`node seams/check-api.mjs` 가 10개 전부 ok** ← 이 티켓의 완료 신호
 
 ```bash
 # 시드 계정으로 왕복 확인
@@ -59,5 +59,5 @@ curl -s localhost:8080/api/me -H "Authorization: Bearer <토큰>" | jq
 ## [확인 명령]
 
 ```bash
-node seams/check-api.mjs      # 9/9 ok 여야 한다
+node seams/check-api.mjs      # 10/10 ok 여야 한다
 ```

@@ -15,12 +15,14 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.LastModifiedDate;
 
 @Entity
 @Getter
@@ -62,6 +64,10 @@ public class Product extends BaseEntity {
 
     @Column(name = "reject_reason", length = 200)
     private String rejectReason;
+
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
 
     @OrderBy("sortOrder asc")
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)

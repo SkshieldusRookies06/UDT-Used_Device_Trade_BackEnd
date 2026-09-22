@@ -1,6 +1,8 @@
 package com.rookies6.udt.common;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,8 +13,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static boolean isAdmin(HttpServletRequest req) {
+        return req.getRequestURI().startsWith("/admin");
+    }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
@@ -43,19 +50,24 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException e) {
-        return ResponseEntity.status(ErrorCode.PRODUCT_NOT_FOUND.getStatus())
-                .body(ErrorResponse.of(ErrorCode.PRODUCT_NOT_FOUND, "요청한 경로를 찾을 수 없습니다"));
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException e, HttpServletRequest req)
+            throws NoResourceFoundException {
+        if (isAdmin(req)) throw e;
+        return ResponseEntity.status(ErrorCode.RESOURCE_NOT_FOUND.getStatus())
+                .body(ErrorResponse.of(ErrorCode.RESOURCE_NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e, HttpServletRequest req) {
+        if (isAdmin(req)) throw e;
         return ResponseEntity.status(ErrorCode.ACCESS_DENIED.getStatus())
                 .body(ErrorResponse.of(ErrorCode.ACCESS_DENIED, ErrorCode.ACCESS_DENIED.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception e, HttpServletRequest req) throws Exception {
+        if (isAdmin(req)) throw e;
+        log.error("unhandled {} {}", req.getMethod(), req.getRequestURI(), e);
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR,
                         ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));

@@ -185,7 +185,7 @@ Settings → Branches → Add branch protection rule → `main`
 
 - [x] Require a pull request before merging (approvals: 1)
 - [x] Do not allow bypassing the above settings
-- [ ] Require status checks — CI가 없으므로 끈다 (게이트는 PR 본문 붙여넣기로 대신한다)
+- [x] Require status checks to pass → `build` 선택 (`.github/workflows/build.yml` — 백엔드는 컴파일+컨텍스트 기동 테스트, 프론트는 `npm run build`. **첫 PR이 한 번 돌아야 목록에 뜬다**) · 게이트(`check-api`)는 서버가 필요해 CI에 없다 — PR 본문 붙여넣기 유지
 
 Settings → General → Pull Requests
 
