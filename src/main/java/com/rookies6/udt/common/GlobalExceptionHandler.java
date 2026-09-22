@@ -66,8 +66,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception e, HttpServletRequest req) throws Exception {
-        if (isAdmin(req)) throw e;
         log.error("unhandled {} {}", req.getMethod(), req.getRequestURI(), e);
+        if (isAdmin(req)) throw e;
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR,
                         ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));

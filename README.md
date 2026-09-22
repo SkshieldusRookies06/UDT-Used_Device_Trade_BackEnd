@@ -190,7 +190,7 @@ main                정본
 | BE-D | **`TransactionService`(상태 전이 단독 오너 · BR-01~08 + `markDisputed`)** · `TransactionController` · 거래 테스트·게이트 확장(T-022) |
 
 > **기동 직후 `check-api`는 10개 중 8개가 ok다.** RED 2개(`POST /api/auth/login (자격 오류)` · `로그인 → 토큰 → /api/me`)는
-> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 10/10가 된다. 7개보다 적으면 다른 문제다.
+> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 10/10가 된다. 8개보다 적으면 다른 문제다.
 >
 > `ProductController`·`CategoryController`는 **하드코딩 껍데기**다(`// TODO(T-006)` 표시).
 > URL과 응답 형태는 계약이므로 그대로 두고 **본문만** Service 연결로 바꾼다.
