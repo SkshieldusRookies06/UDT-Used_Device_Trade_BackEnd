@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
@@ -47,6 +48,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ErrorCode.VALIDATION_ERROR.getStatus())
                 .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR,
                         ErrorCode.VALIDATION_ERROR.getMessage()));
+    }
+
+    // 상한을 넘는 파일은 multipart 파싱에서 끊겨 FileStorageService까지 오지 않는다 (T-023)
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(ErrorCode.FILE_TOO_LARGE.getStatus())
+                .body(ErrorResponse.of(ErrorCode.FILE_TOO_LARGE, ErrorCode.FILE_TOO_LARGE.getMessage()));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
