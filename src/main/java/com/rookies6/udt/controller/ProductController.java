@@ -30,6 +30,7 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
 
+        if (page < 0 || size < 1) throw new BusinessException(ErrorCode.VALIDATION_ERROR);
         int pageSize = Math.min(size, 100);
         List<ProductSummaryResponse> content = "__none__".equals(q) ? List.of() : List.of(sample());
         PageImpl<ProductSummaryResponse> result =

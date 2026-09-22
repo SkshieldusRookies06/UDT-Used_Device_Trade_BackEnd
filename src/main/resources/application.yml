@@ -20,10 +20,6 @@ spring:
       max-request-size: 30MB
   data:
     web:
-      pageable:
-        default-page-size: 12
-        max-page-size: 100
-        one-indexed-parameters: false
 
 server:
   port: ${PORT:8080}

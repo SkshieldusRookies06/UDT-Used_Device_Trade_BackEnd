@@ -25,7 +25,7 @@
 | 경로 | 내용 |
 |---|---|
 | `SPEC.md` | **계약 정본.** 코드와 충돌하면 이게 이긴다 |
-| `seams/check-api.mjs` | 계약 게이트 9개 검사 |
+| `seams/check-api.mjs` | 계약 게이트 10개 검사 |
 | `mock/server.mjs` | 프론트가 쓰는 목 서버 |
 | `entity/` | 엔티티 8종 — **끝까지 나 단독. 인계 없음** |
 | `common/` | `ErrorCode` · `BusinessException` · `ApiResponse` · `@RestControllerAdvice` |
@@ -145,7 +145,7 @@ IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 node seams/check-api.mjs
 ```
 
-`확인:` **9개 중 7개 ok가 정상이다.** red 2개는 `POST /api/auth/login (자격 오류)`와 `로그인 → 토큰 → /api/me` — 둘 다 `AuthController`가 없어서다.
+`확인:` **10개 중 8개 ok가 정상이다.** red 2개는 `POST /api/auth/login (자격 오류)`와 `로그인 → 토큰 → /api/me` — 둘 다 `AuthController`가 없어서다.
 `AuthController`가 아직 없기 때문이고 BE-B의 T-004가 채운다. **전부 red면 다른 문제다** — DB 아니면 포트.
 
 **6) push하고 README의 `<조직>` 자리를 채운다**
@@ -156,7 +156,7 @@ push 직후 GitHub에서 두 리포 모두 **`main` 보호 + Squash merge만 허
 한 명씩 위 2~5를 돌리게 하고, **막히면 옆에 붙어서 같이 본다.**
 포트가 사람마다 다를 수 있으니 각자 `SELECT @@port;` 를 먼저 돌리게 한다.
 
-`확인:` **7명 전원이 자기 PC에서 게이트 7/9를 봤다.** 이게 D1 오전의 완료 조건이다.
+`확인:` **7명 전원이 자기 PC에서 게이트 8/10를 봤다.** 이게 D1 오전의 완료 조건이다.
 
 ---
 
@@ -197,7 +197,7 @@ mysql -u udt -pudt -P 3307 udt -e "SELECT COUNT(*) FROM products; SELECT status,
 **6) Repository를 인계한다** — 채널에 한 줄 올린다.
 "`ProductRepository`·`WishRepository`·`CategoryRepository` → BE-C, `TransactionRepository`·`DisputeRepository` → BE-D 넘깁니다."
 
-`확인:` 게이트 7/9 유지 · 위 grep 두 개 통과 · 인계 공지 완료.
+`확인:` 게이트 8/10 유지 · 위 grep 두 개 통과 · 인계 공지 완료.
 
 ---
 

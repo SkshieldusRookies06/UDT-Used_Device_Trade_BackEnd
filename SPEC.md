@@ -24,7 +24,7 @@
 | 식별자 | **JSON에서 문자열** — DTO의 id를 `String`으로. 전역 Long 문자열화 금지 |
 | 날짜 | `OffsetDateTime` → ISO 8601 · `spring.jackson.time-zone=Asia/Seoul` · **`LocalDateTime` 엔티티에서도 금지** |
 | 금액 | `Long` · 원 단위 · 필드명 `priceKrw`·`amountKrw` |
-| 응답 봉투 | 성공 `{"success":true,"data":…,"message":"…","timestamp":"…"}` · 목록은 `data.content[]` + `data.page{...}` · 에러 `{"success":false,"statusCode":404,"code":"…","message":"…","timestamp":"…"}` |
+| 응답 봉투 | 성공 `{"success":true,"data":…,"message":"…","timestamp":"…"}` · 목록은 `data.content[]` + `data.page{...}` · 에러 `{"success":false,"statusCode":404,"code":"…","message":"…","fields":null,"timestamp":"…"}` — **`fields` 키는 항상 있다**(검증 에러만 배열, 나머지 `null`). Security 필터가 만드는 401도 같은 `ErrorResponse`로 직렬화한다 |
 | 에러 처리 | `@RestControllerAdvice` **한 곳** (`common/GlobalExceptionHandler`) |
 | 응답 객체 | **DTO만 · 엔티티 직접 반환 금지** · DTO 변환은 Service 안에서 |
 | API 호출 | axios 인스턴스 1개(`src/api/client.js`) · `timeout: 10000` · 인터셉터가 **`res.data.data`** 반환 (**예외: `responseType: "blob"`이면 `res.data`** — 파일 다운로드) · `success:false`면 `code`·`message`로 reject · `/api/auth/**`는 401 처리 제외 |
@@ -325,14 +325,16 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | wishCount | int | Y | — | — | |
 | createdAt | str | Y | ISO8601 **오프셋 포함** | — | |
 
-에러: 400 `VALIDATION_ERROR`(`page`가 음수 등) · 500 `INTERNAL_SERVER_ERROR`
-- **`size`가 100을 넘으면 에러가 아니라 100으로 잘린다** — `max-page-size=100`(§0)이 스프링에서 조용히 절단한다
+에러: 400 `VALIDATION_ERROR`(`page` < 0 · `size` < 1) · 500 `INTERNAL_SERVER_ERROR`
+- **`size`가 100을 넘으면 에러가 아니라 100으로 잘린다** — 컨트롤러가 `Math.min(size, 100)`으로 절단한다
+- 페이징은 `@RequestParam int page/size`로 받고 **`Pageable` 바인딩을 쓰지 않는다** — `Pageable`은 음수 page를 조용히 0으로 고쳐 200을 내므로 위 400 계약과 어긋난다
 
 ### 4.3 `GET /api/products/{id}`
 
 성공 200 · `data`는 **객체**(배열 아님).
-필드 = 4.2 + `description`(str) · `images`(**배열 · 0장이면 `[]` · 절대 null 아님**) ·
-`sellerId`(str) · `wished`(bool · 비로그인이면 false) · `updatedAt`.
+필드 = 4.2 **− `thumbnailUrl`** + `description`(str) · `images`(**배열 · 0장이면 `[]` · 절대 null 아님**) ·
+`sellerId`(str) · `wished`(bool · 비로그인이면 false) · `updatedAt`(str · ISO8601 오프셋 · **null 불가** — `products.updated_at`).
+상세는 `images[]`가 사진 전부를 주므로 `thumbnailUrl`을 **넣지 않는다**(목·게이트·DTO 모두 동일).
 `images[]` 원소: `{"id":"31","url":"/api/products/12/images/31","sortOrder":0}`
 
 에러: 404 `PRODUCT_NOT_FOUND` · **400 `VALIDATION_ERROR`(형식 불량 id — `@PathVariable Long`에 문자열이 오면 여기)**
@@ -415,6 +417,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `AUTHENTICATION_REQUIRED` | 401 | 로그인이 필요합니다 |
 | `ACCESS_DENIED` | 403 | 접근 권한이 없습니다 |
 | `INTERNAL_SERVER_ERROR` | 500 | 서버 오류가 발생했습니다 |
+| `RESOURCE_NOT_FOUND` | 404 | 요청한 경로를 찾을 수 없습니다 (매핑 없는 URL — 상품 없음과 구분) |
 | `USER_NOT_FOUND` | 404 | 회원을 찾을 수 없습니다 |
 | `EMAIL_ALREADY_EXISTS` | 409 | 이미 가입된 이메일입니다 |
 | `PRODUCT_NOT_FOUND` | 404 | 상품을 찾을 수 없습니다 |
@@ -446,7 +449,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 |---|---|---|
 | `users` | id · email · password · nickname · role · balance_krw · created_at | `uk_users_email` |
 | `categories` | id · name | `uk_categories_name` |
-| `products` | id · seller_id(FK) · category_id(FK) · title · description · price_krw · condition_grade · status · reject_reason · created_at | `idx_products_status_created`(목록 정렬) · `idx_products_title`(검색) |
+| `products` | id · seller_id(FK) · category_id(FK) · title · description · price_krw · condition_grade · status · reject_reason · created_at · **updated_at**(`@LastModifiedDate` · Product에만) | `idx_products_status_created`(목록 정렬) · `idx_products_title`(검색) |
 | `product_images` | id · product_id(FK) · stored_name · original_name · sort_order | |
 | `wishes` | id · user_id(FK) · product_id(FK) · created_at | **`uk_wishes_user_product(user_id, product_id)`** |
 | `transactions` | id · product_id(FK) · buyer_id(FK) · amount_krw · status · courier · tracking_no · created_at · confirmed_at | **`uk_transactions_product(product_id)`** |
@@ -538,6 +541,9 @@ B2. Controller에서 Repository 직접 호출 금지.
 B3. Service에 웹 타입(HttpServletRequest·ResponseEntity·Model) 금지.
     검사: grep -rlE "ResponseEntity|HttpServletRequest|org.springframework.ui.Model" \
           src/main/java --include='*Service.java'                                     (무출력)
+B4. 상태 전이(Product.changeStatus · Transaction.transition)는 TransactionService에서만 (§2.5).
+    검사: grep -rl "changeStatus(\|\.transition(" src/main/java --include='*.java' \
+          | grep -v "entity/\|TransactionService"                                     (무출력)
 ```
 > B3이 하이브리드의 핵심이다 — Service가 웹을 모르므로 **REST 컨트롤러와 Thymeleaf 컨트롤러가
 > 같은 Service를 부른다.** 발표 Q&A "MVC인데 View는 어디 있나"의 답이 이것이다:
