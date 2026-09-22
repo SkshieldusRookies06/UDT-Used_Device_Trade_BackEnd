@@ -2,6 +2,8 @@ package com.rookies6.udt.service;
 
 import com.rookies6.udt.common.BusinessException;
 import com.rookies6.udt.common.ErrorCode;
+import com.rookies6.udt.dto.ShippingRequest;
+import com.rookies6.udt.dto.TransactionResponse;
 import com.rookies6.udt.entity.*;
 import com.rookies6.udt.repository.ProductRepository;
 import com.rookies6.udt.repository.TransactionRepository;
@@ -27,7 +29,7 @@ public class TransactionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
         if (product.getStatus() != ProductStatus.INSPECTING) {
-            // TODO(BE-A 요청): 상품 전용 에러코드(PRODUCT_NOT_INSPECTING 등) 검토
+            // TODO(BE-A 확인 필요): 상품 전용 에러코드(PRODUCT_NOT_INSPECTING 등) 검토
             throw new BusinessException(ErrorCode.INVALID_TRANSACTION_STATUS);
         }
         product.changeStatus(ProductStatus.ON_SALE);
@@ -47,7 +49,7 @@ public class TransactionService {
 
     // ── BR-03 구매 요청 ──────────────────────────────────────
     @Transactional
-    public Transaction purchase(Long buyerId, Long productId) {
+    public TransactionResponse purchase(Long buyerId, Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
@@ -65,8 +67,13 @@ public class TransactionService {
             throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
         }
 
-        // TODO(BE-C, D2 요청): ProductRepository.transition() 조건부 UPDATE로 교체 필요
-        product.changeStatus(ProductStatus.IN_TRADE);
+        // ── 여기부터 원자적 ──
+        int updated = productRepository.transition(
+                productId, ProductStatus.ON_SALE, ProductStatus.IN_TRADE);
+        if (updated == 0) {
+            // 검사 통과 후 다른 요청이 먼저 IN_TRADE로 바꿔버린 경우 (동시성)
+            throw new BusinessException(ErrorCode.PRODUCT_NOT_ON_SALE);
+        }
 
         buyer.withdraw(product.getPriceKrw());
 
@@ -74,14 +81,15 @@ public class TransactionService {
                 .product(product)
                 .buyer(buyer)
                 .amountKrw(product.getPriceKrw())
-                .build();
+                .build(); // 생성자에서 status = PAID로 고정됨
 
-        return transactionRepository.save(transaction);
+        transactionRepository.save(transaction);
+        return TransactionResponse.from(transaction);
     }
 
     // ── BR-04 송장 입력 ──────────────────────────────────────
     @Transactional
-    public Transaction registerShipping(Long sellerId, Long transactionId, String courier, String trackingNo) {
+    public TransactionResponse registerShipping(Long sellerId, Long transactionId, ShippingRequest request) {
         Transaction transaction = getTransactionOrThrow(transactionId);
 
         if (!transaction.getProduct().getSeller().getId().equals(sellerId)) {
@@ -91,13 +99,13 @@ public class TransactionService {
             throw new BusinessException(ErrorCode.INVALID_TRANSACTION_STATUS);
         }
 
-        transaction.registerShipping(courier, trackingNo);
-        return transaction;
+        transaction.registerShipping(request.courier(), request.trackingNo());
+        return TransactionResponse.from(transaction);
     }
 
     // ── BR-05 구매 확정 ──────────────────────────────────────
     @Transactional
-    public Transaction confirm(Long buyerId, Long transactionId) {
+    public TransactionResponse confirm(Long buyerId, Long transactionId) {
         Transaction transaction = getTransactionOrThrow(transactionId);
 
         if (!transaction.getBuyer().getId().equals(buyerId)) {
@@ -111,12 +119,12 @@ public class TransactionService {
         transaction.getProduct().changeStatus(ProductStatus.SOLD);
         transaction.getProduct().getSeller().deposit(transaction.getAmountKrw());
 
-        return transaction;
+        return TransactionResponse.from(transaction);
     }
 
-    // ── BR-06 분쟁 신고 — 상태 전이만 ──────────────────────────
+    // ── BR-06 분쟁 신고 — 전이만. Dispute 생성은 BE-A(T-010)가 이 메서드를 호출 ──
     @Transactional
-    public Transaction markDisputed(Long buyerId, Long transactionId) {
+    public void markDisputed(Long buyerId, Long transactionId) {
         Transaction transaction = getTransactionOrThrow(transactionId);
 
         if (!transaction.getBuyer().getId().equals(buyerId)) {
@@ -128,12 +136,11 @@ public class TransactionService {
         }
 
         transaction.changeStatus(TransactionStatus.DISPUTED);
-        return transaction;
     }
 
     // ── BR-07 관리자 강제 환불 ────────────────────────────────
     @Transactional
-    public Transaction forceRefund(Long transactionId) {
+    public TransactionResponse forceRefund(Long transactionId) {
         Transaction transaction = getTransactionOrThrow(transactionId);
 
         if (transaction.getStatus() != TransactionStatus.DISPUTED) {
@@ -144,12 +151,12 @@ public class TransactionService {
         transaction.getProduct().changeStatus(ProductStatus.ON_SALE);
         transaction.getBuyer().deposit(transaction.getAmountKrw());
 
-        return transaction;
+        return TransactionResponse.from(transaction);
     }
 
     // ── BR-08 관리자 강제 확정 ──────────────────────────────
     @Transactional
-    public Transaction forceConfirm(Long transactionId) {
+    public TransactionResponse forceConfirm(Long transactionId) {
         Transaction transaction = getTransactionOrThrow(transactionId);
 
         if (transaction.getStatus() != TransactionStatus.DISPUTED) {
@@ -160,7 +167,7 @@ public class TransactionService {
         transaction.getProduct().changeStatus(ProductStatus.SOLD);
         transaction.getProduct().getSeller().deposit(transaction.getAmountKrw());
 
-        return transaction;
+        return TransactionResponse.from(transaction);
     }
 
     private Transaction getTransactionOrThrow(Long transactionId) {
