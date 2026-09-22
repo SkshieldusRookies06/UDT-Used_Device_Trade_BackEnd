@@ -64,7 +64,7 @@
 
 | 티켓 | 언제 | 선행 | 끝났다는 증거 |
 |---|---|---|---|
-| [T-004 JWT 발급·검증](../../tasks/T-004-JWT-발급검증.md) | D1~D2 | T-001 | `./mvnw test` 통과 · 게이트 7/9 (login 관련 2개만 red)가 정상 |
+| [T-004 JWT 발급·검증](../../tasks/T-004-JWT-발급검증.md) | D1~D2 | T-001 | 테스트 전체 통과(IntelliJ) · 게이트 7/9 (login 관련 2개만 red)가 정상 |
 | [T-005 Security 완성·로그인 API](../../tasks/T-005-Security-완성.md) | **D3** | T-004 | **게이트 9/9 ok** ★ |
 | [T-018 관리자 Thymeleaf](../../tasks/T-018-관리자-Thymeleaf.md) | D6~D7 | T-005 | 브라우저에서 검수 승인이 실제로 된다 |
 
@@ -114,7 +114,7 @@ security/JwtTokenProvider.java
 
 합의한 내용을 `SPEC.md` §1 OPEN에 적고 BE-A에게 개정을 요청한다. **적기 전까지 그 합의는 무효다.**
 
-`확인:` `./mvnw test` 통과 · 게이트는 여전히 7/9 (login 관련 2개만 red · 아직 정상).
+`확인:` 테스트 전체 통과(IntelliJ) · 게이트는 여전히 7/9 (login 관련 2개만 red · 아직 정상).
 
 ---
 
@@ -255,7 +255,7 @@ D10    리허설
 
 ```bash
 # 기동
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 
 # 내 완료 증명 — T-005 끝나면 9/9 여야 한다
 node seams/check-api.mjs

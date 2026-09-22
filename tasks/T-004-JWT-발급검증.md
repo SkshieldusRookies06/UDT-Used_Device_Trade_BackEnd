@@ -50,7 +50,7 @@ secret     32바이트 이상 (app.jwt.secret · 환경변수로 주입 가능)
 ## [확인 명령]
 
 ```bash
-./mvnw test
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+IntelliJ에서 src/test 우클릭 → Run 'All Tests'
+IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 node seams/check-api.mjs        # 이 시점엔 7/9 (login 관련 2개만 RED)가 정상
 ```

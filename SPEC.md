@@ -16,7 +16,7 @@
 | 항목 | 확정값 |
 |---|---|
 | 프론트 | React 18 + Vite (`npm create vite@latest -- --template react`) · `package-lock.json` 커밋 · Node LTS |
-| 백엔드 | Spring Boot 4.0.x + Java 17 · **Maven wrapper 커밋**(`./mvnw`로만 실행) |
+| 백엔드 | Spring Boot 4.0.x + Java 17 · **실행은 IntelliJ 표준**(`UdtApplication` ▶ · profile `local`) · Maven 래퍼는 선택(리포에 없음) |
 | DB | **MariaDB 10.x** · 드라이버 `mariadb-java-client` · **각자 로컬** · DB명 `udt` · 계정 `udt/udt` · 포트 **3307**(다르면 `DB_PORT` 환경변수) · 공유 개발 DB 없음 (ADR-11) |
 | 포트 | 프론트 5173 (`server: { port: 5173, strictPort: true }`) · 백엔드 8080 |
 | JSON 키 | **camelCase** (Jackson 기본 — 변환 레이어 없음) |
@@ -82,7 +82,7 @@
 상품 이미지 샘플은 팀이 직접 찍거나 무료 이미지 5~10장을 `seed-images/`에 둔다.
 
 ### 5. 기술 스택 · 개발 환경
-§0 표. 전원 확인: `java -version` · `node -v` · 백엔드 리포에서 `./mvnw -v`의 Java version 줄 ·
+§0 표. 전원 확인: `java -version` · `node -v` · IntelliJ Project Structure의 SDK가 17 이상 ·
 **MariaDB 기동 + §6.1 확인 절차**(`SELECT VERSION(); SELECT @@port;`). **MySQL이 아니다** — ADR-11.
 **JDK는 17 이상이면 된다**(`pom.xml`의 `<java.version>17</java.version>`은 컴파일 타깃이라 JDK 21·24에서도 빌드된다).
 다만 팀원마다 메이저가 다르면 "제 로컬에선 됩니다"가 생기므로 D1에 하나로 맞춘다.

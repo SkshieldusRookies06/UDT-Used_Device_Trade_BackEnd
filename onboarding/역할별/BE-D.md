@@ -271,7 +271,7 @@ curl -s localhost:8080/api/products/999999999 | jq
 @Test void 강제_환불하면_잔액_상품_분쟁이_같이_바뀐다()  // BR-07 네 줄 원자성
 ```
 
-**3) `./mvnw test` 는 MariaDB가 떠 있어야 돈다** — 저녁 게이트 전에 DB부터 켠다.
+**3) 테스트(`@SpringBootTest`)는 MariaDB가 떠 있어야 돈다** — 저녁 게이트 전에 DB부터 켠다.
 
 `확인:` 게이트 12/12 (실서버·목) · 테스트 전부 통과 · API 응답 형태는 한 글자도 안 바뀜.
 
@@ -310,10 +310,10 @@ D10    리허설
 
 ```bash
 # 기동
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 
 # 내 완료 증명 — 상태 머신은 게이트가 아니라 테스트로 증명한다
-./mvnw test
+IntelliJ에서 src/test 우클릭 → Run 'All Tests'
 node seams/check-api.mjs
 
 # 구매 → 송장 → 구매확정 (시연 ③④⑦)

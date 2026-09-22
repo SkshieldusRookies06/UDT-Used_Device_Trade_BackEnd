@@ -266,7 +266,7 @@ D10    리허설
 
 ```bash
 # 기동
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 
 # 내 완료 증명
 node seams/check-api.mjs

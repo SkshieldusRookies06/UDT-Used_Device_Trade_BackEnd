@@ -9,7 +9,7 @@
 
 | | Windows | macOS / Linux |
 |---|---|---|
-| 래퍼 실행 | `mvnw.cmd` (앞에 `./` 없음) | `chmod +x mvnw` 한 번 → `./mvnw` |
+| 실행 | **IntelliJ ▶** (전원 공통). 터미널로 돌릴 때만 `mvnw.cmd` (앞에 `./` 없음 · 래퍼는 선택) | IntelliJ ▶. 터미널이면 `chmod +x mvnw` 후 `./mvnw` |
 | MariaDB 포트 찾기 | `netstat -ano \| findstr LISTENING \| findstr :330` | `lsof -i :3306 -i :3307` |
 | 8080 잡은 프로세스 죽이기 | `netstat -ano \| findstr :8080` → `taskkill /PID <pid> /F` | `lsof -ti :8080 \| xargs kill` |
 | 줄바꿈 | `.gitattributes`가 LF로 고정한다 — 에디터가 CRLF로 바꾸면 diff가 전부 빨개진다 | — |
@@ -17,8 +17,8 @@
 
 
 ```
-전제: JDK 17 설치 — 확인: java -version 과 ./mvnw -v 의 "Java version:" 줄이 같은가
-      IDE가 쓰는 JDK는 별개다. 프로젝트 설정에서 한 번 더 확인
+전제: JDK 17 이상 설치 — 확인: java -version
+      IDE가 쓰는 JDK는 별개다. File → Project Structure → SDK 가 17 이상인지 한 번 더 확인
 전제: Lombok 쓰므로 IntelliJ에서 Enable annotation processing 켠다
 전제: MariaDB 기동 · 포트 확인 · DB/계정 생성 (SPEC §6.1)
       SELECT VERSION();                -- 10.x.x-MariaDB 인지 먼저 확인
@@ -26,21 +26,22 @@
       CREATE USER 'udt'@'localhost' IDENTIFIED BY 'udt';
       GRANT ALL PRIVILEGES ON udt.* TO 'udt'@'localhost';
 
-git clone <URL> && cd <repo>
-./mvnw -q -DskipTests package   ← Windows는 mvnw.cmd
-                                                   첫 실행은 의존성 다운로드로 5분. 멈춘 게 아니다
+git clone <URL>
+IntelliJ → Open → 리포 폴더 선택 → pom.xml 을 Maven 프로젝트로 인식 (우하단 "Load Maven" 뜨면 클릭)
+                                                   첫 로딩은 의존성 다운로드로 5분. 멈춘 게 아니다
+Run/Debug Configurations → UdtApplication → Active profiles: local
 손으로 만들 파일 없음 — application-local.yml 은 clone 에 딸려온다
 ```
 
-> **IntelliJ로 실행해도 된다.** 실행 버튼 = `spring-boot:run`, 테스트 실행 = `mvnw test`.
-> 래퍼는 IDE 없이 빌드를 확인할 때(평가자·"제 IDE에선 되는데요" 판정)를 위해 리포에 둔다.
+> **실행·테스트는 IntelliJ가 표준이다.** 실행 = `UdtApplication` ▶ · 테스트 = `src/test` 우클릭 → Run 'All Tests'.
+> Maven 래퍼(`mvnw`)는 리포에 **없다**(선택 · IDE 없이 빌드 확인이 필요해지면 그때 넣는다 — README "첫 빌드 전에").
 > **게이트(`node seams/check-api.mjs`)만은 전원이 같은 명령으로** — 이건 IDE와 무관하다.
 
 ## 아침 (매일)
 
 ```
-1) 터미널 1 — ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
-   확인: 로그 끝에 "Started UdtApplication in N seconds"
+1) IntelliJ ▶ UdtApplication (Active profiles: local)
+   확인: 콘솔 끝에 "Started UdtApplication in N seconds"
          그 위에 "Tomcat started on port 8080"
    확인: 터미널 2에서 node seams/check-api.mjs → "OK: ... 계약 준수"
 
@@ -60,7 +61,7 @@ git clone <URL> && cd <repo>
 ## 끝 (매일)
 
 ```
-5) ./mvnw test 에러 0 · node seams/check-api.mjs OK
+5) IntelliJ 테스트 전체 실행 에러 0 · node seams/check-api.mjs OK
 6) curl "http://localhost:8080/api/products?page=0&size=12" 출력을 SPEC.md §4.2 예시와 눈으로 대조
    게이트가 안 보는 것(정렬 순서·값의 말이 되는가)이 여기서 보인다
 7) git diff 를 읽는다 → 커밋·push는 내가 한다 → 오너에게 머지 요청
@@ -98,7 +99,7 @@ git clone <URL> && cd <repo>
 | check-api가 **9개 중 7개 ok** (RED 2개) | RED는 `POST /api/auth/login (자격 오류)`와 `로그인 → 토큰 → /api/me` — 둘 다 `AuthController`가 없어서다(T-004·T-005). **7/9면 정상 진행 중**이고, T-005가 끝나면 9/9가 된다 |
 | `required a single bean, but 2 were found: corsConfigurationSource, mvcHandlerMappingIntrospector` | Spring MVC가 만드는 `HandlerMappingIntrospector`도 `CorsConfigurationSource`다. 우리 빈에 `@Primary`가 빠지면 둘 중 못 고른다 | `CorsConfig`의 빈에 `@Primary` (스캐폴드에 이미 있음 — 지웠으면 복구) |
 | `LazyInitializationException: could not initialize proxy` | `open-in-view: false`라 **트랜잭션 밖에서 연관 엔티티를 건드렸다.** 대개 Controller에서 DTO 변환을 했거나, Service 메서드에 `@Transactional`이 없다 | DTO 변환을 Service 안(`@Transactional`)으로 옮긴다. 규약 B2 |
-| `./mvnw test`가 컨텍스트 로딩에서 죽는다 | `@SpringBootTest`는 **MariaDB가 떠 있어야** 돈다 | 테스트 전에 DB를 켠다. 순수 로직 테스트는 `@SpringBootTest` 없이 짠다 |
+| 테스트 실행이 컨텍스트 로딩에서 죽는다 | `@SpringBootTest`는 **MariaDB가 떠 있어야** 돈다 | 테스트 전에 DB를 켠다. 순수 로직 테스트는 `@SpringBootTest` 없이 짠다 |
 | 프론트 콘솔에 `Unexpected token '<'` | `/api/**` 체인이 `/admin/**`보다 뒤에 있다. `@Order` 순서 (SPEC §7) |
 | 관리자 폼 제출이 403 | CSRF 토큰. Thymeleaf `<form th:action>`을 쓰면 자동 삽입된다 |
 | check-api가 `401 응답이 JSON이 아님` | 기본 302 리다이렉트다. `AuthenticationEntryPoint`에서 공통 봉투 JSON으로 (SPEC §7) |

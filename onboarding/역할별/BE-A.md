@@ -31,7 +31,7 @@
 | `common/` | `ErrorCode` · `BusinessException` · `ApiResponse` · `@RestControllerAdvice` |
 | `config/CorsConfig.java` | CORS |
 | `resources/data.sql` | 시드 |
-| `pom.xml` · `mvnw` · `.mvn/` · `README.md` · `CLAUDE.md` | 리포 뼈대 |
+| `pom.xml` · `README.md` · `CLAUDE.md` | 리포 뼈대 |
 | `application.yml` · `application-local.yml` | 설정 — **키 블록 단위로만 남에게 연다** |
 | `repository/` | D1~D2만. **D2 저녁에 파일 단위로 넘긴다** (아래 3번) — `Dispute*Repository`는 내가 계속 |
 | **`controller/MeController.java` · `service/MeService.java`** | **T-021** `/api/me/products·transactions·wishes` (신규) |
@@ -104,16 +104,15 @@
 
 ### T-001 — 리포 셋업·전원 첫 기동 (D1 오전 · 이게 늦으면 6명이 논다)
 
-**1) Maven 래퍼를 채운다** — 팀원이 IntelliJ로 실행해도 래퍼는 넣는다(평가자 빌드·IDE 문제 판정용)
-스캐폴드에 `mvnw`가 없다. 수업 리포(`SpringBoot4_Basic_Project`)에서 가져온다.
+**1) IntelliJ로 연다** — 실행은 전원 IntelliJ가 표준이다. Maven 래퍼(`mvnw`)는 **일부러 없다.**
+IntelliJ → Open → 리포 폴더 → 우하단 "Load Maven Project" 클릭 → 첫 로딩 5분(의존성 다운로드).
+Run/Debug Configurations → `UdtApplication` → **Active profiles: `local`**. Lombok이라 Settings → Annotation Processors → Enable 체크.
 
-```bash
-cp -r <수업리포>/mvnw <수업리포>/mvnw.cmd <수업리포>/.mvn ./
-chmod +x mvnw
-```
-> IntelliJ에서 Maven 프로젝트로 열면 래퍼 없이도 되지만, **팀원 7명이 같은 명령을 써야 하니 래퍼를 넣는다.**
+> 래퍼가 필요해지는 건 IDE 없이 빌드를 확인할 때뿐(평가자 빌드 · "제 IDE에선 되는데요" 판정). 그때 수업 리포
+> `SpringBoot4_Basic_Project`의 `mvnw`·`mvnw.cmd`·**`.mvn/` 폴더째** 복사한다 — `.mvn/wrapper/`가 빠지면
+> `Cannot start maven from wrapper`. D8~D9에 넣어도 된다.
 
-`확인:` `./mvnw -v` 가 버전을 출력한다.
+`확인:` Maven 도구창(우측)에 `udt` 프로젝트와 Dependencies가 뜬다.
 
 **2) DB가 진짜 MariaDB인지 확인한다 (건너뛰면 D1이 통째로 날아간다)**
 
@@ -135,7 +134,7 @@ mysql -u root -p -P 3307 -e "CREATE DATABASE udt DEFAULT CHARACTER SET utf8mb4;
 **4) 기동한다** — `ddl-auto: create` 라서 스키마가 생기고 `data.sql` 시드가 같이 돈다.
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 ```
 
 `확인:` 기동 로그에 `Started UdtApplication` · `localhost:8080/api/health` 가 응답한다.
@@ -151,6 +150,7 @@ node seams/check-api.mjs
 
 **6) push하고 README의 `<조직>` 자리를 채운다**
 두 리포가 서로를 링크하는 게 리포 2개 구성에서 길을 잃지 않는 유일한 장치다.
+push 직후 GitHub에서 두 리포 모두 **`main` 보호 + Squash merge만 허용 + 브랜치 자동 삭제**를 켠다 — 정확한 체크 항목은 [`GitHub규약.md` §8](../../docs/참고/GitHub규약.md) (10분). 이걸 D1에 안 켜면 D3쯤 누군가 `main`에 직접 push한다.
 
 **7) 팀원 6명을 붙인다 — 여기가 T-001의 진짜 내용이다**
 한 명씩 위 2~5를 돌리게 하고, **막히면 옆에 붙어서 같이 본다.**
@@ -278,7 +278,7 @@ permitAll은 `SecurityConfig`에 이미 있다 (`/api/products/*/images/*`).
 ```bash
 cp README.md fake.jpg                    # 위장 파일
 # T-007(BE-C)이 연결되기 전엔 단위 테스트로 store() 를 직접 호출해 검사한다
-./mvnw test -Dtest=FileStorageServiceTest
+IntelliJ에서 FileStorageServiceTest 우클릭 → Run
 ls uploads/products                      # UUID 이름만 보여야 한다
 ```
 
@@ -386,7 +386,7 @@ D10  리허설 진행 · 제출
 
 ```bash
 # 기동
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 
 # 내 완료 증명
 node seams/check-api.mjs
