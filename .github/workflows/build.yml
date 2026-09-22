@@ -28,4 +28,4 @@ jobs:
           java-version: "17"
           cache: maven
       - name: Build & test
-        run: mvn -B -q test
+        run: mvn -B test
