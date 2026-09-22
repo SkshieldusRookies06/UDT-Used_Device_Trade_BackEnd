@@ -7,5 +7,5 @@ public interface WishRepository extends JpaRepository<Wish, Long> {
 
     boolean existsByUserIdAndProductId(Long userId, Long productId);
     int countByProductId(Long productId);
-
+    void deleteByUserIdAndProductId(Long userId, Long productId);
 }
