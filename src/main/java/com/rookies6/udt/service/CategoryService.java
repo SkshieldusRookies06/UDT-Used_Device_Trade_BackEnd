@@ -22,7 +22,6 @@ public class CategoryService {
                 .map(category -> new CategoryResponse(
                         String.valueOf(category.getId()), category.getName())
                 )
-                // 읽기 전용
                 .toList();
     }
 }
