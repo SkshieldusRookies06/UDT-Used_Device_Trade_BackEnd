@@ -11,7 +11,8 @@
 ## 1. 한 줄로
 
 **이 프로젝트가 존재하는 이유가 내 파트다.** "돈 보내고 물건을 못 받는" 문제를 상태 머신으로 푸는 것.
-`TransactionService`의 상태 전이는 **나 단독 오너**다 — 아무도 여기를 못 건드린다. 발표에서도 **가장 중요한 장(에스크로 상태 머신)** 을 내가 말한다.
+`TransactionService`의 상태 전이는 **나 단독 오너**다 — BR-01~08 여덟 개 전부, 분쟁 전이(`markDisputed`)까지. 아무도 여기를 못 건드린다.
+분쟁 엔티티·증빙 파일은 BE-A(T-010)가 만들고 내 메서드를 호출한다 — **나는 상태 머신 하나에 집중한다.** 발표에서도 **가장 중요한 장(에스크로 상태 머신)** 을 내가 말한다.
 
 ---
 
@@ -23,15 +24,16 @@
 |---|---|
 | `service/TransactionService.java` | **상태 전이 단독 오너.** 상태를 바꾸는 코드는 전부 여기에만 있다 |
 | `controller/TransactionController.java` | 구매 · 송장 · 구매확정 |
-| `controller/DisputeController.java` · `service/DisputeService.java` | 분쟁 접수 · 판정 |
-| `dto/Transaction*` · `dto/Dispute*` | DTO |
-| `repository/TransactionRepository` · `DisputeRepository` | **D2 저녁에 BE-A에게서 인계받는다** |
-| 증빙 파일 업로드·다운로드 | 분쟁 증빙 |
+| `dto/Transaction*` | DTO — `TransactionResponse`는 BE-A(T-021)도 쓴다. **D2에 필드를 확정해 알려 준다** |
+| `repository/TransactionRepository` | **D2 저녁에 BE-A에게서 인계받는다** |
+| `src/test/**` 거래 테스트 · 게이트 거래 검사 3개 | **T-022** (게이트 파일은 BE-A 소유 — diff로 넘기거나 페어) |
 
 ### 절대 안 건드린다
 
 - `entity/` — 필드가 필요하면 **BE-A에게 요청**한다
 - **상품 등록·검색** (BE-C). 상품 조회가 필요하면 BE-C의 Service를 **호출**하고 고치지 않는다
+- **Dispute·DisputeFile 생성, 증빙 파일 저장·다운로드** (BE-A T-010). 나는 `markDisputed()`로 전이만 준다
+- `/api/me/*` 목록 (BE-A T-021)
 - `security/` · `SecurityConfig` (BE-B)
 - `common/` — 에러 코드가 더 필요하면 BE-A에게 요청
 
@@ -49,7 +51,8 @@
 
 | 나 | 상대 | 무엇에 대해 |
 |---|---|---|
-| **BE-D** | **FE-C** | 거래 **상태별로 어떤 버튼이 보이는가** · 분쟁 신고 · 증빙 파일 |
+| **BE-D** | **FE-C** | 거래 **상태별로 어떤 버튼이 보이는가** · 송장 · 구매확정 |
+| BE-D | BE-A | `markDisputed(buyerId, txId)` 시그니처(D2) · `TransactionResponse` 필드(D2) · `approve/reject/forceRefund/forceConfirm` 시그니처(D6 전, BE-B도 쓴다) |
 
 이 짝이 합의하면 거래 계약이 확정된다. **합의는 `SPEC.md`에 커밋되기 전까지 무효다.**
 
@@ -63,9 +66,10 @@
 | 티켓 | 언제 | 선행 | 끝났다는 증거 |
 |---|---|---|---|
 | [T-009 거래 상태 머신](../../tasks/T-009-거래-상태머신.md) | D1~D3 | T-002·T-003 | **BR-01~BR-08 8개 규칙이 전부 테스트로 증명된다** |
-| [T-010 분쟁·증빙 파일](../../tasks/T-010-분쟁-증빙파일.md) | D5~D6 | T-009 | 증빙 첨부 분쟁 → 관리자 강제 환불 → 잔액 복구가 돈다 |
+| [T-003 공통 예외·봉투 검증](../../tasks/T-003-공통예외-검증.md) | **D4** | T-009 | 에러 4종이 봉투대로 · `common/` 수정은 BE-A에게 diff로 |
+| [T-022 거래 게이트 확장·테스트](../../tasks/T-022-거래-게이트확장-테스트.md) | **D5~D6** | T-009 · T-021 | 게이트 **12/12**(실서버·목 양쪽) · 상태 머신 엣지 테스트 통과 |
 
-> 내 티켓은 2개뿐이지만 **T-009가 가장 무겁다.** 상태 전이 8개 규칙을 원자적으로 만드는 일이다.
+> **T-009가 가장 무겁다.** 상태 전이 8개 규칙을 원자적으로 만드는 일이다. 그래서 분쟁 도메인은 BE-A에게 넘기고, 나는 D5~D6에 그 상태 머신을 테스트와 게이트로 **증명**하는 데 쓴다.
 
 > **`[수용 기준]`이 비어 있는 티켓은 시작하지 않는다** — 완료 판정을 말로 하게 된다.
 
@@ -106,7 +110,7 @@ public class TransactionService {
     @Transactional public TransactionResponse purchase(Long buyerId, Long productId);      // BR-03
     @Transactional public TransactionResponse registerShipping(Long sellerId, Long txId, ShippingRequest r); // BR-04
     @Transactional public TransactionResponse confirm(Long buyerId, Long txId);            // BR-05
-    @Transactional public TransactionResponse openDispute(Long buyerId, Long txId, ...);   // BR-06
+    @Transactional public void markDisputed(Long buyerId, Long txId);                     // BR-06 전이만 — Dispute 생성은 BE-A(T-010)가 이 메서드를 호출
     @Transactional public TransactionResponse forceRefund(Long txId);                      // BR-07 (관리자)
     @Transactional public TransactionResponse forceConfirm(Long txId);                     // BR-08 (관리자)
 }
@@ -207,66 +211,79 @@ curl -s -X POST localhost:8080/api/products/1/purchase -H "Authorization: Bearer
 
 ---
 
-### T-010 — 분쟁 접수·증빙 파일 (D5~D6)
+### T-003 — 공통 예외·봉투 검증 (D4 · 통합일에 나온 에러 응답이 재료다)
 
-**1) `openDispute` (BR-06)**
+`common/` 6개 파일이 이미 있다(BE-A 소유). **검증하고, 틀린 곳은 BE-A에게 diff로 넘기는 티켓**이다 — 내가 직접 고치지 않는다.
 
+**1) `ErrorCode.java`를 `SPEC.md` §5 표와 한 줄씩 대조한다**
+
+```bash
+grep -cE '^\s+[A-Z_]+\(' src/main/java/com/rookies6/udt/common/ErrorCode.java
 ```
-1) 호출자가 구매자인가?                    → 아니면 403
-2) status 가 PAID 또는 SHIPPING 인가?      → 아니면 409 INVALID_TRANSACTION_STATUS
-3) 이미 분쟁이 있는가?                     → 409 DISPUTE_ALREADY_EXISTS
-4) ── 원자적으로 ──
-   transaction.status = DISPUTED
-   Dispute 저장 (사유)
-   증빙 파일들을 DisputeFile 로 저장
-```
-> 파일 저장은 BE-C의 `FileStorageService`를 **재사용한다.** 같은 걸 또 만들지 않는다.
-> 없으면 BE-C에게 요청한다.
+`확인:` 22개. 모자라면 §5 표에서 빠진 것을 채운다. **메시지 문구는 표 그대로** — 화면이 이 문구를 그대로 띄운다.
 
-**2) 증빙 다운로드에 권한 검사를 반드시 넣는다**
+**2) `GlobalExceptionHandler`가 네 가지를 다 잡는지 본다**
 
-```
-GET /api/disputes/{id}/files/{fileId}
-  허용: 거래 당사자(구매자·판매자) + 관리자
-  그 외 → 403
-```
-> **여기가 이 프로젝트에서 가장 새기 쉬운 구멍이다.** 파일 id만 바꿔 가며 남의 증빙을 받을 수 있게 된다.
+| 잡는 것 | 내는 것 |
+|---|---|
+| `BusinessException` | 그 `ErrorCode`의 status·code·message |
+| `MethodArgumentNotValidException` | 400 `VALIDATION_ERROR` + **`fields[]`** |
+| `AccessDeniedException` | 403 |
+| 나머지 `Exception` | 500 `INTERNAL_SERVER_ERROR` — **스택트레이스를 응답에 담지 않는다** |
 
-**3) `forceRefund` (BR-07) · `forceConfirm` (BR-08) — 관리자용**
+**3) 절대 하지 말 것 하나**
+`@JsonInclude(NON_NULL)`을 **전역으로 걸지 않는다.** `thumbnailUrl: null`이 응답에서 사라지면
+프론트가 "키가 있는데 값이 null"로 분기할 수 없게 된다. 계약이 깨진다.
 
-```
-BR-07 강제 환불
-   transaction.status = REFUNDED
-   product.status     = ON_SALE        ← 다시 팔 수 있게 돌아간다
-   buyer.balance     += amount         ← 구매자 돈이 돌아온다
-   dispute.status     = RESOLVED
+**4) 에러 형태를 직접 확인한다**
 
-BR-08 강제 확정
-   transaction.status = CONFIRMED
-   product.status     = SOLD
-   seller.balance    += amount
-   dispute.status     = RESOLVED
-```
-> **네 줄이 전부 한 트랜잭션이다.** 하나라도 빠지면 "환불됐는데 상품이 SOLD"가 남는다.
-> 이 메서드는 BE-B의 관리자 화면(T-018)이 호출한다. **BE-B가 직접 상태를 바꾸지 않게 한다.**
-
-**4) 시연 ⑤⑥ 경로를 통으로 돌려 본다**
-
-```
-구매 → 송장 → 분쟁 신고(파일 첨부) → 관리자 화면에서 증빙 다운로드 → 강제 환불
-→ 구매자 잔액이 원래대로 · 상품이 다시 판매중
+```bash
+curl -s localhost:8080/api/products/999999999 | jq
+# { "success": false, "statusCode": 404, "code": "PRODUCT_NOT_FOUND", "message": "...", "timestamp": "..." }
 ```
 
-`확인:` 위 경로가 끊기지 않고 돈다 · 환불 후 구매자 잔액이 **구매 전과 정확히 같다**.
+`확인:` `node seams/check-api.mjs` 의 에러 형태 검사가 ok.
 
 ---
+
+### T-022 — 거래 게이트 확장 · 테스트 보강 (D5~D6)
+
+**T-009를 "증명"하는 티켓이다.** 계약 표류를 기계가 잡게 하고, 상태 머신의 경계를 테스트로 닫는다.
+
+**1) 게이트에 검사 3개를 추가한다** — `seams/check-api.mjs`는 BE-A 소유라 **BE-A 옆에서 같이 넣거나 diff로 넘긴다**
+
+```
+- POST /api/products/{id}/purchase       → 201 · data.buyerId·data.sellerId 가 문자열
+- GET  /api/transactions/{id}            → status 가 5종 enum 중 하나 · amountKrw 숫자
+- PATCH /api/transactions/{id}/confirm (PAID 상태 거래에) → 409 INVALID_TRANSACTION_STATUS
+```
+> 기존 9개 검사의 형태(`check()` · `errs.push`)를 그대로 따른다. **실서버와 목 서버 양쪽에서 12/12**여야 머지.
+> 목이 12/12가 안 나오면 목이 계약을 안 따르는 것 — BE-A에게 보고.
+
+**2) 상태 머신 엣지 테스트** — T-009의 8개 위에 얹는다
+
+```java
+@Test void 잔액이_정확히_가격과_같으면_구매되고_잔액이_0이_된다()
+@Test void 같은_사용자가_두_상품을_연속_구매하면_잔액이_합만큼_준다()
+@Test void 판매자가_자기_거래를_구매확정하면_403()
+@Test void 환불된_상품은_다시_구매할_수_있다()          // REFUNDED → 상품 ON_SALE 복귀
+@Test void 검수_승인하면_INSPECTING이_ON_SALE이_된다()  // BR-01 — BE-B T-018이 D6에 부른다
+@Test void 강제_환불하면_잔액_상품_분쟁이_같이_바뀐다()  // BR-07 네 줄 원자성
+```
+
+**3) `./mvnw test` 는 MariaDB가 떠 있어야 돈다** — 저녁 게이트 전에 DB부터 켠다.
+
+`확인:` 게이트 12/12 (실서버·목) · 테스트 전부 통과 · API 응답 형태는 한 글자도 안 바뀜.
+
+---
+
 
 ## 6. 내 10일
 
 ```
 D1~D3  T-009 거래 상태 머신 (이 프로젝트의 핵심 · 여기에 시간을 쓴다)
-D4   ★ 1차 통합 대응 — FE-C와 상태별 액션을 맞춘다
-D5~D6  T-010 분쟁 접수 · 증빙 업로드/다운로드
+D4   ★ 1차 통합 대응 — FE-C와 상태별 액션을 맞춘다 + T-003 공통 예외·봉투 검증
+D5~D6  T-022 거래 게이트 검사 3개(→12/12) · 상태 머신 테스트 보강
 D7     마감 · 엣지 케이스 점검 (이중 구매 · 잔액 부족 · 본인 상품 구매)
 D8   ★ 시연 ④⑤⑦ 구간 (송장 → 분쟁 → 구매확정)
 D9     발표 **에스크로 상태 머신 — 가장 중요한 장** · 회고록

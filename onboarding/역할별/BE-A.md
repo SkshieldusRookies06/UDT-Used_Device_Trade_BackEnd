@@ -10,8 +10,8 @@
 
 ## 1. 한 줄로
 
-**내가 막히면 6명이 막힌다.** D1 오전의 T-001이 전원의 선행이고, 엔티티·공통 예외·시드·계약(`SPEC.md`)이 내 것이다.
-기능 하나를 끝까지 만드는 역할이 아니라, **나머지 6명이 각자 끝까지 갈 수 있게 바닥을 까는 역할**이다.
+**D1~D2는 바닥을 깐다. D3부터는 내 기능이 있다.** D1 오전의 T-001이 전원의 선행이고, 엔티티·시드·계약(`SPEC.md`)이 내 것이다.
+그 위에 **마이페이지 API 3개(T-021)** 와 **분쟁·증빙 파일(T-010)** 이 내 기능 도메인이다 — 발표에서 "증빙 파일 권한 검사"를 내가 말한다.
 
 > 관리 업무도 산출물이다 — 리포 셋업·게이트·목 서버·시드·계약 개정은 전부 커밋 로그로 증명된다.
 > 개인 기여가 안 보일까 걱정하지 않아도 된다. `git log --author`가 말해 준다.
@@ -33,11 +33,15 @@
 | `resources/data.sql` | 시드 |
 | `pom.xml` · `mvnw` · `.mvn/` · `README.md` · `CLAUDE.md` | 리포 뼈대 |
 | `application.yml` · `application-local.yml` | 설정 — **키 블록 단위로만 남에게 연다** |
-| `repository/` | D1~D2만. **D2 저녁에 파일 단위로 넘긴다** (아래 3번) |
+| `repository/` | D1~D2만. **D2 저녁에 파일 단위로 넘긴다** (아래 3번) — `Dispute*Repository`는 내가 계속 |
+| **`controller/MeController.java` · `service/MeService.java`** | **T-021** `/api/me/products·transactions·wishes` (신규) |
+| **`service/FileStorageService.java` · `controller/ProductImageController.java`** | **T-023** 파일 저장·검증·서빙 — 상품(BE-C)·분쟁(나) 공용 · 보안 검사 한 벌 (신규) |
+| **`controller/DisputeController.java` · `service/DisputeService.java` · `dto/Dispute*` · `admin/AdminDisputeFileController.java`** | **T-010** 분쟁 접수 · 증빙 업로드/다운로드 (신규) |
 
 ### 절대 안 건드린다
 
 - 남의 `Service` · `Controller` **내부**
+- **상태 전이** — 분쟁도 `DISPUTED`로 바꾸는 건 BE-D의 `TransactionService.markDisputed()`다. 나는 호출만
 - `security/` · `SecurityConfig` (BE-B)
 - `admin/` · `templates/` (BE-B)
 - 프론트 리포 — 계약이 바뀌어도 **프론트를 대신 고치지 않는다.** SPEC·게이트·목만 고치고 알린다
@@ -58,6 +62,8 @@
 | 나 | 상대 | 무엇에 대해 |
 |---|---|---|
 | BE-A | **전원** | 계약(`SPEC.md`) 개정 승인 · 엔티티 필드 추가 요청 |
+| **BE-A** | **FE-C** | 마이페이지 4탭 목록(`/api/me/*`) · 분쟁 신고 폼 · 증빙 파일 다운로드 |
+| BE-A | BE-D | `markDisputed(buyerId, txId)` 시그니처 (D2에 받는다) · `TransactionResponse` DTO |
 
 ### D2 저녁 — Repository 인계
 
@@ -66,7 +72,8 @@
 | 파일 | 넘길 사람 |
 |---|---|
 | `ProductRepository` · `WishRepository` · `CategoryRepository` | **BE-C** |
-| `TransactionRepository` · `DisputeRepository` | **BE-D** |
+| `TransactionRepository` | **BE-D** |
+| `DisputeRepository` · `DisputeFileRepository` | 내가 계속 (T-010) |
 | `UserRepository` | 내가 계속 (BE-B는 소비만) |
 
 **엔티티는 인계하지 않는다.** 필드가 필요하다는 요청이 오면 내가 고친다.
@@ -79,7 +86,9 @@
 |---|---|---|---|
 | [T-001 리포 셋업·첫 기동](../../tasks/T-001-리포셋업-첫기동.md) | **D1 오전** | — | 7명 전원이 자기 PC에서 기동 성공 |
 | [T-002 엔티티·시드 확정](../../tasks/T-002-엔티티-시드-확정.md) | D2 | T-001 | `data.sql`이 오류 없이 돌고 시드가 조회된다 |
-| [T-003 공통 예외·검증](../../tasks/T-003-공통예외-검증.md) | D3 | T-001 | 게이트의 에러 형태 검사 통과 |
+| [T-021 마이페이지 API 3개](../../tasks/T-021-마이페이지-API.md) | **D3** | T-002 · T-005 | buyer1로 거래 4건·찜 2건, `role=x`는 400 |
+| [T-023 파일 저장·검증·서빙](../../tasks/T-023-파일저장-서빙.md) | **D3** | T-002 | 위장 파일 400 · `../` 경로 무효 · UUID 이름 · 이미지 GET 200 |
+| [T-010 분쟁 접수·증빙 파일](../../tasks/T-010-분쟁-증빙파일.md) | **D5~D6** | T-009 · T-023 | 증빙 첨부 분쟁 → 관리자 다운로드 → 강제 환불이 돈다 · 제3자 다운로드 403 |
 
 **T-001은 D1 오전에 끝낸다.** 여섯 명이 이것을 기다리고 있다.
 
@@ -95,7 +104,7 @@
 
 ### T-001 — 리포 셋업·전원 첫 기동 (D1 오전 · 이게 늦으면 6명이 논다)
 
-**1) Maven 래퍼를 채운다**
+**1) Maven 래퍼를 채운다** — 팀원이 IntelliJ로 실행해도 래퍼는 넣는다(평가자 빌드·IDE 문제 판정용)
 스캐폴드에 `mvnw`가 없다. 수업 리포(`SpringBoot4_Basic_Project`)에서 가져온다.
 
 ```bash
@@ -192,38 +201,151 @@ mysql -u udt -pudt -P 3307 udt -e "SELECT COUNT(*) FROM products; SELECT status,
 
 ---
 
-### T-003 — 공통 예외·검증 (D3)
+### T-021 — 마이페이지 API 3개 (D3)
 
-`common/` 6개 파일이 이미 있다. **검증하고 빈 곳을 채우는 티켓**이다.
+FE-C의 4탭이 이걸 본다. **크기는 하루**고, 어려운 건 없다 — Repository는 내가 만든 거고 DTO는 남의 걸 재사용한다.
 
-**1) `ErrorCode.java`를 `SPEC.md` §5 표와 한 줄씩 대조한다**
+**1) `MeService` 를 만든다 — 조회 3개, 전부 `@Transactional(readOnly = true)`**
+
+```
+myProducts(userId, pageable)      → productRepository.findBySellerId(...)      → Page<ProductSummaryResponse>
+myTransactions(userId, role, pg)  → role=buyer: findByBuyerId / role=seller: findByProductSellerId → Page<TransactionResponse>
+myWishes(userId, pageable)        → wishRepository.findByUserId(...) → 상품으로 변환 → Page<ProductSummaryResponse>
+```
+> `role`이 `buyer`·`seller` 외면 `BusinessException(VALIDATION_ERROR)`. `TransactionResponse`가 아직 없으면(BE-D T-009 진행 중) 필드를 BE-D에게 받아 온다 — 계약은 `SPEC.md` §4.5.
+
+**2) Repository에 조회 메서드를 넣는다** — `ProductRepository.findBySellerId`·`WishRepository.findByUserId`·`TransactionRepository.findByBuyerId`·`findByProductSellerId`.
+D2 저녁에 인계하기 **전에** 넣어 두면 인계받는 사람 파일을 안 건드린다. 인계 후라면 BE-C·BE-D에게 한 줄 요청.
+
+**3) `MeController`** — 경로 3개, `@AuthenticationPrincipal`로 userId, Service 호출만. **Repository 직접 주입 금지.**
+
+**4) 확인**
 
 ```bash
-grep -cE '^\s+[A-Z_]+\(' src/main/java/com/rookies6/udt/common/ErrorCode.java
+TOKEN=$(curl -s -X POST localhost:8080/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"buyer1@udt.test","password":"Test1234!"}' | jq -r .data.accessToken)
+curl -s "localhost:8080/api/me/transactions?role=buyer" -H "Authorization: Bearer $TOKEN" | jq '.data.page.totalElements'   # 4
+curl -s "localhost:8080/api/me/wishes" -H "Authorization: Bearer $TOKEN" | jq '.data.page.totalElements'                    # 2
+curl -s "localhost:8080/api/me/transactions?role=x" -H "Authorization: Bearer $TOKEN" | jq '.code'                          # VALIDATION_ERROR
 ```
-`확인:` 22개. 모자라면 §5 표에서 빠진 것을 채운다. **메시지 문구는 표 그대로** — 화면이 이 문구를 그대로 띄운다.
+`확인:` 세 숫자가 맞고, `MeController`에 `Repository`가 없다. FE-C에게 "실서버 붙여도 됩니다" 공지.
 
-**2) `GlobalExceptionHandler`가 네 가지를 다 잡는지 본다**
+---
 
-| 잡는 것 | 내는 것 |
-|---|---|
-| `BusinessException` | 그 `ErrorCode`의 status·code·message |
-| `MethodArgumentNotValidException` | 400 `VALIDATION_ERROR` + **`fields[]`** |
-| `AccessDeniedException` | 403 |
-| 나머지 `Exception` | 500 `INTERNAL_SERVER_ERROR` — **스택트레이스를 응답에 담지 않는다** |
+### T-023 — 파일 저장·검증·서빙 (D3 · T-021과 같은 날 · 내 기능 ②)
 
-**3) 절대 하지 말 것 하나**
-`@JsonInclude(NON_NULL)`을 **전역으로 걸지 않는다.** `thumbnailUrl: null`이 응답에서 사라지면
-프론트가 "키가 있는데 값이 null"로 분기할 수 없게 된다. 계약이 깨진다.
+**왜 내가 하나** — 파일은 상품 이미지(BE-C)와 분쟁 증빙(나) 둘이 쓰는데, 이 프로젝트에서 **보안상 가장 새기 쉬운 자리**다.
+경로 조작(`../../`), 확장자 위장(`.txt`를 `.jpg`로), 남의 파일 열람. 한 사람이 한 벌로 만들고 둘이 호출만 하게 한다.
 
-**4) 에러 형태를 직접 확인한다**
+**1) `FileStorageService` — 메서드 셋**
+
+```
+store(MultipartFile file, String subdir) → StoredFile{storedName, originalName, sizeBytes}
+load(String subdir, String storedName)   → Resource
+contentType(String storedName)           → "image/jpeg" 등
+```
+
+**2) `store()` 안의 검사 순서 — 순서가 중요하다**
+
+```
+1) file.isEmpty() → 400 VALIDATION_ERROR
+2) 용량 > 5MB → 400 FILE_TOO_LARGE
+3) 확장자 화이트리스트 (subdir 별: products=jpg jpeg png webp · disputes=+pdf)
+   → 아니면 400 FILE_TYPE_NOT_ALLOWED
+4) 내용 검사 — 확장자만 믿지 않는다
+   이미지: ImageIO.read() 가 null 이면 FILE_TYPE_NOT_ALLOWED  (또는 매직 바이트 4개 비교)
+   pdf: 앞 4바이트가 %PDF
+5) storedName = UUID.randomUUID() + "." + 확장자      ← 원본 이름은 여기 절대 안 들어간다
+6) 저장 경로 = Path.of(uploadDir, subdir).resolve(storedName).normalize()
+   → 그 경로가 uploadDir 아래인지 startsWith 로 확인. 아니면 FILE_STORAGE_ERROR
+7) Files.copy → 실패 시 500 FILE_STORAGE_ERROR
+```
+> 6번이 경로 조작 방어다. 5번에서 이름을 UUID로 만들었으니 사실상 못 뚫지만, **두 겹으로 둔다.**
+
+**3) `ProductImageController` — `GET /api/products/{id}/images/{imageId}`**
+
+```
+1) imageId 로 ProductImage 조회 → 없으면 404 PRODUCT_NOT_FOUND
+2) image.product.id != id 이면 404   ← 다른 상품의 이미지를 URL로 긁는 걸 막는다
+3) load() 한 Resource 를 Content-Type 붙여 반환 (Content-Disposition 없음 — 인라인 표시)
+```
+permitAll은 `SecurityConfig`에 이미 있다 (`/api/products/*/images/*`).
+
+**4) 기동 시 `uploads/products`·`uploads/disputes` 를 만든다** — `@PostConstruct` 에서 `Files.createDirectories`.
+
+**5) 확인**
 
 ```bash
-curl -s localhost:8080/api/products/999999999 | jq
-# { "success": false, "statusCode": 404, "code": "PRODUCT_NOT_FOUND", "message": "...", "timestamp": "..." }
+cp README.md fake.jpg                    # 위장 파일
+# T-007(BE-C)이 연결되기 전엔 단위 테스트로 store() 를 직접 호출해 검사한다
+./mvnw test -Dtest=FileStorageServiceTest
+ls uploads/products                      # UUID 이름만 보여야 한다
 ```
 
-`확인:` `node seams/check-api.mjs` 의 에러 형태 검사가 ok.
+`확인:` 위장 파일 → `FILE_TYPE_NOT_ALLOWED` · `../` 이름 → `uploads/` 밖에 아무것도 없음 · 채널에 "`FileStorageService` 올렸습니다, `store(file, \"products\")` 쓰세요" 공지.
+**이게 D3 저녁에 안 나오면 BE-C의 D4 T-007이 막힌다.**
+
+---
+
+### T-010 — 분쟁 접수·증빙 파일 (D5~D6 · 내 기능 ③)
+
+> **분업** — `PAID|SHIPPING → DISPUTED` 전이는 BE-D의 `TransactionService.markDisputed(buyerId, txId)`다. 나는 `DisputeService.open()` 안에서
+> 그걸 **호출**하고 Dispute·DisputeFile을 만든다. `open()`이 `@Transactional`이라 둘이 한 트랜잭션이다(§2.5).
+
+**1) `DisputeService.open()` (BR-06의 내 몫)**
+
+```
+1) 호출자가 구매자인가?                    → 아니면 403
+2) status 가 PAID 또는 SHIPPING 인가?      → 아니면 409 INVALID_TRANSACTION_STATUS
+3) 이미 분쟁이 있는가?                     → 409 DISPUTE_ALREADY_EXISTS
+4) ── 원자적으로 ──
+   transactionService.markDisputed(buyerId, txId)   ← 전이는 BE-D 메서드
+   Dispute 저장 (사유)
+   증빙 파일들을 DisputeFile 로 저장 (내 FileStorageService · store(file, "disputes"))
+```
+> 파일 저장은 T-023에서 내가 만든 `FileStorageService`다. 분쟁용 허용 목록(jpg·png·pdf)은 subdir로 구분한다.
+
+**2) 증빙 다운로드에 권한 검사를 반드시 넣는다**
+
+```
+GET /api/disputes/{id}/files/{fileId}
+  허용: 거래 당사자(구매자·판매자) + 관리자
+  그 외 → 403
+```
+> **여기가 이 프로젝트에서 가장 새기 쉬운 구멍이다.** 파일 id만 바꿔 가며 남의 증빙을 받을 수 있게 된다.
+
+**3) 관리자용 다운로드 경로 — `GET /admin/disputes/{id}/files/{fileId}` (세션 인증)**
+
+같은 저장·권한 코드로 한 매핑만 더 둔다. BE-B의 관리자 화면(T-018)이 이 링크를 건다.
+`forceRefund`·`forceConfirm`(BR-07·08)은 **BE-D T-009** 것이다 — 내가 만들지 않는다.
+
+<details><summary>참고 — BR-07·08 부작용 (BE-D 것)</summary>
+
+```
+BR-07 강제 환불
+   transaction.status = REFUNDED
+   product.status     = ON_SALE        ← 다시 팔 수 있게 돌아간다
+   buyer.balance     += amount         ← 구매자 돈이 돌아온다
+   dispute.status     = RESOLVED
+
+BR-08 강제 확정
+   transaction.status = CONFIRMED
+   product.status     = SOLD
+   seller.balance    += amount
+   dispute.status     = RESOLVED
+```
+> **네 줄이 전부 한 트랜잭션이다.** 하나라도 빠지면 "환불됐는데 상품이 SOLD"가 남는다.
+> 이 메서드는 BE-B의 관리자 화면(T-018)이 호출한다.
+</details>
+
+**4) 시연 ⑤⑥ 경로를 통으로 돌려 본다**
+
+```
+구매 → 송장 → 분쟁 신고(파일 첨부) → 관리자 화면에서 증빙 다운로드 → 강제 환불
+→ 구매자 잔액이 원래대로 · 상품이 다시 판매중
+```
+
+`확인:` 위 경로가 끊기지 않고 돈다 · 환불 후 구매자 잔액이 **구매 전과 정확히 같다**.
 
 ---
 
@@ -232,10 +354,10 @@ curl -s localhost:8080/api/products/999999999 | jq
 ```
 D1   T-001 리포·환경 (모두의 선행 — 오전에 끝낸다)
 D2   T-002 엔티티·시드 확정 → 그날 저녁 02-Entity설계서 재발췌 · Repository 인계
-D3   T-003 공통 예외 검증
+D3   T-021 마이페이지 API 3개  ← 내 기능 ①
 D4 ★ 1차 통합 중재 — 계약 분쟁 판정은 내 몫 · 03-REST-API설계서 확정
-D5   중간 점검 진행 · 막힌 사람 지원
-D6~D7  문서 갱신 · 지원 (여기서 기능을 새로 잡지 않는다)
+D5~D6  T-010 분쟁 접수 · 증빙 업로드/다운로드  ← 내 기능 ②
+D7   마감 · 설계서 1차 재발췌
 D8 ★ 시연 PC 셋업 주도 · 전체 경로 1회
 D9   발표 1~2번 슬라이드 · 회고록 · 20:00 기능 동결 선언
 D10  리허설 진행 · 제출

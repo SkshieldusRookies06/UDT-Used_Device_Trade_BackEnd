@@ -22,9 +22,9 @@
 | 경로 | 내용 |
 |---|---|
 | `controller/ProductController.java` · `CategoryController.java` | 상품·카테고리 |
-| `controller/WishController.java` | 찜 |
+| `controller/WishController.java` | 찜 토글 (목록 `/api/me/wishes`는 BE-A) |
 | `service/Product*` · `service/WishService.java` | 서비스 |
-| `service/FileStorageService.java` | 이미지 저장 (내가 만든다) |
+
 | `dto/Product*` · `dto/Wish*` | DTO |
 | `repository/ProductRepository` · `WishRepository` · `CategoryRepository` | **D2 저녁에 BE-A에게서 인계받는다** |
 
@@ -39,6 +39,7 @@
 
 | 파일 | 규칙 |
 |---|---|
+| `service/FileStorageService.java` | **BE-A 소유.** 호출만. 검증 로직을 복제하지 않는다 |
 | `application.yml` | **BE-A 소유.** T-019에서 `hibernate.default_batch_fetch_size` **한 줄만** 넣는다. BE-B의 `app.jwt.*`는 안 건드린다. 충돌 나면 main을 받아 그 줄만 다시 넣는다 |
 
 > 남의 파일이 틀려 보여도 고치지 않는다. **오너에게 보고**한다.
@@ -63,8 +64,8 @@
 | 티켓 | 언제 | 선행 | 끝났다는 증거 |
 |---|---|---|---|
 | [T-006 상품 목록·상세 API](../../tasks/T-006-상품-목록상세-API.md) | D1~D2 | T-002 | 게이트의 상품 검사 4개 통과 |
-| [T-007 상품 등록·이미지 업로드](../../tasks/T-007-상품등록-이미지업로드.md) | D3~D4 | T-006 | 사진 3장 붙은 상품이 실제로 등록된다 |
-| [T-008 찜 토글](../../tasks/T-008-찜-토글.md) | D5 | T-006 | 찜 추가/해제가 두 번 눌러도 일관된다 |
+| [T-008 찜 토글](../../tasks/T-008-찜-토글.md) | D3 | T-006 | 찜 추가/해제가 두 번 눌러도 일관된다 |
+| [T-007 상품 등록 연결](../../tasks/T-007-상품등록-이미지업로드.md) | D4 (반나절) | T-006 · **T-023(BE-A)** | 사진 3장 붙은 상품이 등록된다 — 파일 저장은 BE-A 서비스 호출 |
 | [T-019 N+1 해결](../../tasks/T-019-N+1-튜닝.md) | **D7** | T-006 | **전후 쿼리 로그 캡처 2장** ★ |
 
 > **`[수용 기준]`이 비어 있는 티켓은 시작하지 않는다** — 완료 판정을 말로 하게 된다.
@@ -130,31 +131,22 @@ curl -s localhost:8080/api/products/999999999 | jq '.code, .statusCode'
 
 ---
 
-### T-007 — 상품 등록·이미지 업로드 (D3~D4)
+### T-007 — 상품 등록 · `FileStorageService` 연결 (D4 · 반나절)
 
 **1) `SPEC.md` §4.4를 읽는다** — multipart 형태가 적혀 있다.
 `product` 파트(JSON) + `images` 파트(파일 여러 개). **base64로 바꾸지 않는다.**
 
-**2) `FileStorageService`를 만든다** (신규)
+**2) 파일 저장은 내가 만들지 않는다** — BE-A의 `FileStorageService`(T-023)가 D3 저녁에 나온다.
+`fileStorageService.store(file, "products")` 한 줄이 검증(형식·용량·이름·경로)을 다 하고 `StoredFile`을 돌려준다.
+**여기서 다시 검증하지 않는다** — 그 예외(`FILE_TYPE_NOT_ALLOWED` 등)가 그대로 봉투로 나가게 둔다.
+내가 하는 검사는 **개수(최대 5장 → `FILE_COUNT_EXCEEDED`)** 하나뿐이다.
 
-```
-store(MultipartFile) → 저장된 상대경로 문자열
-  1) 확장자 화이트리스트 (jpg·jpeg·png·webp)
-  2) 용량 상한
-  3) 파일명을 서버가 새로 만든다  ← 원본 이름을 경로에 쓰지 않는다
-     (경로 조작 "../../etc/passwd" 과 중복 덮어쓰기를 동시에 막는다)
-  4) uploads/ 아래에 저장
-```
-> **검증은 서버에서 한다.** 프론트 검증은 왕복을 줄이는 편의일 뿐, 막는 장치가 아니다.
-
-**3) `uploads/` 가 gitignore에 있는지 확인한다.** 없으면 업로드 파일이 커밋에 들어간다.
-
-**4) `ProductService.create()` 를 만든다**
+**3) `ProductService.create()` 를 만든다**
 
 ```
 1) 로그인 사용자 = seller
 2) Product 저장  (status = INSPECTING  ← 등록 즉시 판매중이 아니다)
-3) images 를 순회하며 FileStorageService.store → ProductImage 저장
+3) images 를 순회하며 fileStorageService.store(file, "products") → StoredFile → ProductImage 저장 (storedName·originalName·sortOrder)
 4) ProductDetailResponse 반환
 ```
 > **등록하면 `INSPECTING`이다.** 관리자 승인(BR-01)을 거쳐야 `ON_SALE`이 된다. 시연 ①②가 이것이다.
@@ -181,8 +173,7 @@ curl -s -X POST localhost:8080/api/products -H "Authorization: Bearer $TOKEN" \
 ```
 POST   /api/products/{id}/wishes   이미 있으면 409 WISH_ALREADY_EXISTS
 DELETE /api/products/{id}/wishes   없으면 404 WISH_NOT_FOUND   ← 계약 확정. 협의 대상이 아니다
-GET    /api/me/wishes            내 찜 목록
-GET    /api/me/products          내가 등록한 상품 (마이페이지 '판매 내역' 탭이 본다)
+(`GET /api/me/wishes` · `/api/me/products` 목록은 BE-A의 T-021이 만든다 — 이 티켓은 토글만)
 ```
 
 > `(userId, productId)` 에 **unique 제약**을 건다. 따닥 두 번 눌러도 두 줄이 안 생긴다.
@@ -244,7 +235,9 @@ node seams/check-api.mjs   # 9/9 유지
 
 ```
 D1~D2  T-006 상품 목록·상세 실구현 (껍데기 교체)
-D3~D5  T-007 등록·이미지 업로드 → T-008 찜
+D3     T-008 찜 토글
+D4     T-007 상품 등록 — BE-A FileStorageService 연결 (반나절) + 통합 대응
+D5     상품 마감
 D4   ★ 1차 통합 대응 — FE-B와 응답 형태를 맞춘다
 D6     마무리 · 03-REST-API설계서 확정
 D7   ★ T-019 N+1 해결 + 전후 캡처 2장 (이건 미루면 증거가 안 남는다)
@@ -307,8 +300,7 @@ curl -s -X POST localhost:8080/api/products -H "Authorization: Bearer $TOKEN" \
 | `fetch join` + 페이징이 경고를 뱉는다 | 컬렉션 fetch join은 페이징과 같이 못 쓴다 | `default_batch_fetch_size` 쪽으로 간다 |
 | 빈 검색 결과가 500 | `content: []`도 정상 응답이다 | 게이트의 빈 결과 검사 |
 | `thumbnailUrl`이 응답에서 사라진다 | `@JsonInclude(NON_NULL)`을 전역으로 걸었다 | **걸지 않는다** — 프론트가 키 존재로 분기한다 |
-| 업로드 파일이 git에 잡힌다 | `uploads/` gitignore 누락 | `.gitignore` |
-| 파일명 그대로 저장했다 | 경로 조작·중복 위험 | 서버에서 이름을 새로 만든다 |
+| 파일 형식·용량·이름 문제 | 전부 BE-A `FileStorageService` 소관 | 내가 고치지 않는다 — BE-A에게 보고 |
 | 상품 상태를 내가 바꿔야 할 것 같다 | 거래가 바꾸는 상태다 | **BE-D에게 요청** — `TransactionService` 단독 |
 
 ---

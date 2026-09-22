@@ -32,6 +32,10 @@ git clone <URL> && cd <repo>
 손으로 만들 파일 없음 — application-local.yml 은 clone 에 딸려온다
 ```
 
+> **IntelliJ로 실행해도 된다.** 실행 버튼 = `spring-boot:run`, 테스트 실행 = `mvnw test`.
+> 래퍼는 IDE 없이 빌드를 확인할 때(평가자·"제 IDE에선 되는데요" 판정)를 위해 리포에 둔다.
+> **게이트(`node seams/check-api.mjs`)만은 전원이 같은 명령으로** — 이건 IDE와 무관하다.
+
 ## 아침 (매일)
 
 ```

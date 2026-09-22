@@ -173,6 +173,10 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 **`TransactionService`(오너 BE-D)의 메서드만** Transaction·Product 상태를 바꾼다.
 분쟁·관리자 기능(BE-B)과 상품 기능(BE-C)은 그 메서드를 **호출만 한다.**
 
+**분쟁(BR-06)의 분업** — 상태 전이 `PAID|SHIPPING → DISPUTED`는 `TransactionService.markDisputed(buyerId, txId)`
+(오너 BE-D)에 두고, Dispute·DisputeFile 생성과 증빙 파일 저장·다운로드·권한 검사는 `DisputeService`(오너 BE-A · T-010)가
+같은 `@Transactional` 안에서 `markDisputed`를 **호출**해 원자성을 유지한다. 분쟁 도메인은 BE-A, 전이는 BE-D.
+
 **BR-01·BR-02(검수 승인/반려)도 예외가 아니다.** Product 상태를 바꾸므로 구현은
 `TransactionService.approveInspection(productId)` · `rejectInspection(productId, reason)`
 **(오너 BE-D · T-009 범위)** 에 두고, 관리자 화면(BE-B · T-018)은 이 둘을 **호출만** 한다. 이 규칙이 없으면 상태 변경 코드가
@@ -259,18 +263,18 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `/api/products` | GET | — | BE-C | SCR-001 |
 | `/api/products/{id}` | GET | — | BE-C | SCR-002 |
 | `/api/products` | POST (multipart) | MEMBER | BE-C | SCR-003 |
-| `/api/products/{id}/images/{imageId}` | GET | — | BE-C | SCR-001·002 |
+| `/api/products/{id}/images/{imageId}` | GET | — | BE-A | SCR-001·002 |
 | `/api/products/{id}/wishes` | POST / DELETE | MEMBER | BE-C | SCR-001·002 |
-| `/api/me/wishes` | GET | MEMBER | BE-C | SCR-004 |
-| `/api/me/products` | GET | MEMBER | BE-C | SCR-004 |
-| `/api/me/transactions?role=buyer\|seller` | GET | MEMBER | BE-D | SCR-004 |
+| `/api/me/wishes` | GET | MEMBER | BE-A | SCR-004 |
+| `/api/me/products` | GET | MEMBER | BE-A | SCR-004 |
+| `/api/me/transactions?role=buyer\|seller` | GET | MEMBER | BE-A | SCR-004 |
 | `/api/products/{id}/purchase` | POST | MEMBER | BE-D | SCR-002 |
 | `/api/transactions/{id}` | GET | 당사자 | BE-D | SCR-005 |
 | `/api/transactions/{id}/shipping` | PATCH | 판매자 | BE-D | SCR-005 |
 | `/api/transactions/{id}/confirm` | PATCH | 구매자 | BE-D | SCR-005 |
-| `/api/transactions/{id}/disputes` | POST (multipart) | 구매자 | BE-D | SCR-005 |
-| `/api/disputes/{id}/files/{fileId}` | GET | 당사자(JWT) | BE-D | SCR-005 |
-| `/admin/disputes/{id}/files/{fileId}` | GET | ADMIN(세션) | BE-D | 관리자 화면 |
+| `/api/transactions/{id}/disputes` | POST (multipart) | 구매자 | BE-A | SCR-005 |
+| `/api/disputes/{id}/files/{fileId}` | GET | 당사자(JWT) | BE-A | SCR-005 |
+| `/admin/disputes/{id}/files/{fileId}` | GET | ADMIN(세션) | BE-A | 관리자 화면 |
 
 > 관리자 `/admin/**`은 **seam이 아니다** — 소비자가 브라우저 사람뿐이라 계약도 게이트도 없다.
 
@@ -519,7 +523,7 @@ MariaDB의 비밀번호 계정은 기본이 `mysql_native_password`라 추가 �
 > **증빙 파일 다운로드가 경로 2개인 이유** — `/api/**`는 무상태 JWT라 브라우저 주소창 이동으로는
 > 인증되지 않는다. 그래서 **당사자(React)는 `/api/disputes/...`를 `Authorization` 헤더와 함께
 > blob으로 받아** 내려받고, **관리자(Thymeleaf·세션)는 `/admin/disputes/...`를 링크로** 누른다.
-> **두 경로 모두 오너는 BE-D**이며 파일 저장·권한 검사 코드는 한 벌을 공유한다.
+> **두 경로 모두 오너는 BE-A(T-010)**이며 파일 저장·권한 검사 코드는 한 벌을 공유한다.
 
 ---
 
