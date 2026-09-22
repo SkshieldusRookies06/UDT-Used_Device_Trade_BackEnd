@@ -30,11 +30,13 @@ public class ProductService {
     public PageResponse<ProductSummaryResponse> getProducts(
             String q, Long categoryId, int page, int size) {
 
+        String normalizedQ = (q == null || q.isBlank()) ? null : q.trim().toLowerCase();
+
         Pageable pageable = PageRequest.of(page, size);
 
         Page<Product> pages = productRepository.findProductsWithOptions(
                 ProductStatus.ON_SALE,
-                q, categoryId, pageable);
+                normalizedQ, categoryId, pageable);
 
         Page<ProductSummaryResponse> result = pages.map(this::toSummaryResponse);
         return PageResponse.from(result);

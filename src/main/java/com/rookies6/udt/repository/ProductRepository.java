@@ -16,13 +16,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                     "JOIN FETCH p.seller " +
                     "JOIN FETCH p.category " +
                     "WHERE p.status = :status " +
-                    "AND (:q IS NULL OR p.title LIKE CONCAT('%', :q, '%')) " +
+                    "AND (:q IS NULL OR LOWER(p.title) LIKE CONCAT('%', :q, '%')) " +
                     "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
                     "ORDER BY p.createdAt DESC",
 
             countQuery = "SELECT COUNT(p) FROM Product p " +
                     "WHERE p.status = :status " +
-                    "AND (:q IS NULL OR p.title LIKE CONCAT('%', :q, '%')) " +
+                    "AND (:q IS NULL OR LOWER(p.title) LIKE CONCAT('%', :q, '%')) " +
                     "AND (:categoryId IS NULL OR p.category.id = :categoryId)"
     )
     Page<Product> findProductsWithOptions(
