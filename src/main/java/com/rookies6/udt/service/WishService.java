@@ -10,6 +10,7 @@ import com.rookies6.udt.repository.ProductRepository;
 import com.rookies6.udt.repository.UserRepository;
 import com.rookies6.udt.repository.WishRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +40,12 @@ public class WishService {
                 .product(product)
                 .build();
 
-        wishRepository.save(wish);
+        // 빠르게 찜을 2번 누르면 요청이 2번 실행되는 예외사항 방지
+        try {
+            wishRepository.save(wish);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.WISH_ALREADY_EXISTS);
+        }
 
         int wishCount = wishRepository.countByProductId(productId);
 
