@@ -159,7 +159,7 @@ public void addImage(ProductImage image) { images.add(image); image.assignTo(thi
 | 필드 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `id` | Long | PK | |
-| `product` | Product | **`@OneToOne(LAZY)`** not null, **unique** | 상품당 거래 1건 |
+| `product` | Product | **`@ManyToOne(LAZY)`** not null | 진행 중 거래 1건은 상품 상태 전이로 보장 (SPEC §2.4) |
 | `buyer` | User | `@ManyToOne(LAZY)` not null | |
 | `amountKrw` | Long | not null | 거래 시점 가격 (스냅샷) |
 | `status` | TransactionStatus | not null | 생성 시 `PAID` |
@@ -341,7 +341,7 @@ public abstract class BaseEntity {
 | 컬럼 | 타입 | NULL | 설명 |
 |---|---|---|---|
 | id | BIGINT AI | N | PK |
-| product_id | BIGINT | N | FK → products · **`uk_transactions_product`** |
+| product_id | BIGINT | N | FK → products · **`idx_transactions_product`** |
 | buyer_id | BIGINT | N | FK → users |
 | amount_krw | BIGINT | N | 거래 시점 금액 |
 | status | ENUM | N | 5종 |
@@ -407,10 +407,10 @@ public abstract class BaseEntity {
 | UNIQUE | `uk_users_email` | users(email) | BR-M001 |
 | UNIQUE | `uk_categories_name` | categories(name) | — |
 | UNIQUE | **`uk_wishes_user_product`** | wishes(user_id, product_id) | BR-W001 |
-| UNIQUE | **`uk_transactions_product`** | transactions(product_id) | 상품당 거래 1건 |
 | UNIQUE | **`uk_disputes_transaction`** | disputes(transaction_id) | BR-D002 |
 | INDEX | `idx_products_status_created` | products(status, created_at) | 목록 조회 |
 | INDEX | `idx_products_title` | products(title) | 검색 |
+| INDEX | **`idx_transactions_product`** | transactions(product_id) | 상품별 거래 조회 (유니크 아님 · SPEC §2.4) |
 | FK | 10개 | — | 참조 무결성 |
 
 #### 초기 데이터 (`data.sql`)

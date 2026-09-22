@@ -168,6 +168,10 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 > 판매자 잔액은 구매확정 전까지 들어오지 않는다. 그 사이의 돈이 에스크로다.
 > 발표 "기술적 도전" 슬라이드가 이 두 줄이다.
 
+> **상품당 진행 중 거래는 최대 1건이다.** 이 불변식은 DB 유니크 제약이 아니라
+> **상품 상태 전이(`ON_SALE → IN_TRADE` 조건부 UPDATE)** 가 보장한다 — BR-07로 `ON_SALE`에
+> 복귀한 상품은 새 거래를 가질 수 있으므로 `transactions(product_id)`에 유니크를 걸면 재구매가 막힌다.
+
 ### 2.5 상태 변경 코드는 한 곳에만 둔다 (MUST)
 
 **`TransactionService`(오너 BE-D)의 메서드만** Transaction·Product 상태를 바꾼다.
@@ -452,7 +456,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `products` | id · seller_id(FK) · category_id(FK) · title · description · price_krw · condition_grade · status · reject_reason · created_at · **updated_at**(`@LastModifiedDate` · Product에만) | `idx_products_status_created`(목록 정렬) · `idx_products_title`(검색) |
 | `product_images` | id · product_id(FK) · stored_name · original_name · sort_order | |
 | `wishes` | id · user_id(FK) · product_id(FK) · created_at | **`uk_wishes_user_product(user_id, product_id)`** |
-| `transactions` | id · product_id(FK) · buyer_id(FK) · amount_krw · status · courier · tracking_no · created_at · confirmed_at | **`uk_transactions_product(product_id)`** |
+| `transactions` | id · product_id(FK) · buyer_id(FK) · amount_krw · status · courier · tracking_no · created_at · confirmed_at | `idx_transactions_product(product_id)` — **유니크 아님**(§2.4) |
 | `disputes` | id · transaction_id(FK) · reporter_id(FK) · reason · status · admin_memo · created_at · resolved_at | **`uk_disputes_transaction(transaction_id)`** |
 | `dispute_files` | id · dispute_id(FK) · stored_name · original_name · size_bytes | |
 | `reviews` (P2) | id · transaction_id(FK) · writer_id · target_id · rating · content | `uk_reviews_transaction` |
