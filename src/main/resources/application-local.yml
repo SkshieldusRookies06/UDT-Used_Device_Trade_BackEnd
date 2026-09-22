@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:${DB_PORT:3307}/udt}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:${DB_PORT:3306}/udt}
     username: ${SPRING_DATASOURCE_USERNAME:udt}
     password: ${SPRING_DATASOURCE_PASSWORD:udt}
     driver-class-name: org.mariadb.jdbc.Driver
