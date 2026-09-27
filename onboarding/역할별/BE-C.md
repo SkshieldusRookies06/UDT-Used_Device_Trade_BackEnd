@@ -8,6 +8,42 @@
 
 ---
 
+## 0. [9/27 개정] 연휴 뒤 첫날 내가 할 것 — BE-C
+
+> **공통 절차 (전원)**
+> 1. `git checkout main && git pull` → 내 브랜치에서 `git merge main`
+> 2. 아래 "판정 테스트"를 IntelliJ에서 실행 → red 확인 (구현 전이니 red가 정상)
+> 3. 아래 표대로 고친다 → 테스트 green → **내 이름으로 커밋** → PR (PR 템플릿에 게이트 출력)
+> 4. 남의 파일은 안 건드린다. 필요하면 오너에게 요청 (표에 "승인" 표시된 한 줄은 예외)
+>
+> 근거: 9/27 팀장 전수 검증 `docs/참고/검증-0927.md` · SPEC §13 개정 이력. 게이트 `node seams/check-api.mjs`는 로그인 API(T-005) 전 **8/13**이 정상.
+
+**판정 테스트 — 기능별 5개 클래스** (`src/test/java/com/rookies6/udt/acceptance/product/`). 클래스 이름 앞 `[BE-C ①②]`가 아래 "바꿀 것" 표의 순서 번호다. **한 줄 고치면 그 번호가 붙은 클래스만 돌려 본다**(IntelliJ 클래스 옆 ▶). `(지킴)`이 붙은 테스트는 지금도 초록 — 고치는 동안 초록을 유지하는 것이 판정이다. T-005(BE-B) 뒤에 실서버 curl까지.
+
+| 표 번호 | 기능 | 테스트 클래스 | 개수 | 지금 red |
+|---|---|---|---|---|
+| ① | 등록 입력값 (DTO만 · 스프링 없이 1초) | `ProductCreateRequestValidationTest` | 6 | 5 |
+| ① | 등록 입력값 — HTTP 400 + `fields[]` (500이 아니라) | `ProductCreateValidationApiTest` | 2 | 2 |
+| ②③ | 사진 저장 · 빈 파트 · 실패 시 파일 정리 · 없는 카테고리 | `ProductImageUploadTest` (서비스 직접 호출 — ⑤와 무관) | 6 | 4 · ③은 `(지킴)` |
+| ⑤ | 등록 API — 판매자 = 로그인 사용자 | `ProductCreateApiTest` | 3 | 2 |
+| ④⑤⑥ | 찜하기·해제 · 상세 `wished` | `WishedFlagTest` | 5 | 3 |
+| ⑦ | (BE-D가 고친다 — 리뷰만) | BE-D `PurchaseBalanceTest` | — | — |
+| | **합계** — `product` 패키지 우클릭 → Run | | **22** | **16** |
+
+| 순서 | 파일 | 있었던 것 | 바꿀 것 | 왜 |
+|---|---|---|---|---|
+| 1 | `dto/ProductCreateRequest.java` | 검증이 `title`의 `@NotBlank`뿐 | `title` `@NotBlank @Size(max=100)` · `description` `@NotBlank @Size(max=2000)` · `priceKrw` `@NotNull @Positive` · `conditionGrade` `@NotBlank @Pattern(regexp="S\|A\|B\|C")` · `categoryId` `@NotBlank @Pattern(regexp="\\d+")`. 메시지는 한국어 | `conditionGrade:"X"`면 `ConditionGrade.valueOf`가 **500**, `priceKrw` 누락이면 NPE **500**. 계약은 400 + `fields[]` |
+| 2 | `service/ProductService.java` `create()` | `// TODO(T-023)` — 이미지 저장 없음 | `FileStorageService` 필드 추가(호출만). 빈 파트(`isEmpty()`)를 걸러낸 `files`로 5장 초과 검사 → `Product` 생성 → `for file : files` `fileStorageService.store(file, FileStorageService.PRODUCTS)` → `product.addImage(new ProductImage(stored.storedName(), stored.originalName(), sortOrder++))` → `productRepository.save(product)`(cascade). 이 블록을 `try/catch(RuntimeException)`로 감싸 **실패하면 저장한 `storedName`들을 `fileStorageService.delete(PRODUCTS, name)`로 지우고 재던진다** | 등록해도 사진이 안 남는다 → 시연 ① 깨짐. DB는 롤백돼도 디스크 파일은 안 되돌아간다 |
+| 3 | `service/ProductService.java` `create()` | 카테고리 `try/catch NumberFormatException` | DTO가 숫자 형식을 검증하니 `Long.parseLong` 직접. 없는 카테고리 → `VALIDATION_ERROR` 유지 | 중복 검증 제거 |
+| 4 | `service/ProductService.java` `getDetail()` | `wished`가 항상 `false` | `getDetail(Long id, Long viewerId)` — `toDetailResponse(product, viewerId)`에서 `viewerId != null && wishRepository.existsByUserIdAndProductId(viewerId, product.getId())`. `create()`의 응답도 `toDetailResponse(product, sellerId)` | T-008 수용 기준 "로그인 사용자 기준" |
+| 5 | `controller/ProductController.java` | `Long sellerId = null` | `CurrentUser.id()`. `detail`은 `productService.getDetail(id, CurrentUser.idOrNull().orElse(null))`. import `com.rookies6.udt.security.CurrentUser` | NPE · SPEC §8 B6 |
+| 6 | `controller/WishController.java` | `Long userId = null` ×2 | `CurrentUser.id()` · TODO 주석 삭제 | 같음 |
+| 7 | `repository/ProductRepository.java` | `@Modifying(clearAutomatically = true)` | **BE-D가 T-009 개정 1번으로 이 옵션을 지운다(내 파일 · 내 승인).** PR 리뷰어로 나를 지정하게 한다 | 구매 시 잔액 유실 원인 |
+
+**확인:** `grep -rn "= null" src/main/java --include='*Controller.java'` 무출력 · N+1은 **손대지 않는다**(T-019 전후 캡처용).
+
+---
+
 ## 1. 한 줄로
 
 **화면에 가장 많이 보이는 데이터가 내 것이다.** 목록·상세·등록·이미지·찜.
@@ -63,7 +99,7 @@
 
 | 티켓 | 언제 | 선행 | 끝났다는 증거 |
 |---|---|---|---|
-| [T-006 상품 목록·상세 API](../../tasks/T-006-상품-목록상세-API.md) | D1~D2 | T-002 | 게이트의 상품 검사 4개 통과 |
+| [T-006 상품 목록·상세 API](../../tasks/T-006-상품-목록상세-API.md) | D1~D2 | T-002 | 게이트의 상품 검사 5개 통과 |
 | [T-008 찜 토글](../../tasks/T-008-찜-토글.md) | D3 | T-006 | 찜 추가/해제가 두 번 눌러도 일관된다 |
 | [T-007 상품 등록 연결](../../tasks/T-007-상품등록-이미지업로드.md) | D4 (반나절) | T-006 · **T-023(BE-A)** | 사진 3장 붙은 상품이 등록된다 — 파일 저장은 BE-A 서비스 호출 |
 | [T-019 N+1 해결](../../tasks/T-019-N+1-튜닝.md) | **D7** | T-006 | **전후 쿼리 로그 캡처 2장** ★ |
@@ -102,7 +138,7 @@ Page<Product> findByStatusAndTitleContaining(ProductStatus status, String q, Pag
 list(q, categoryId, page, size)  →  Page<Product>  →  PageResponse<ProductSummaryResponse>
 detail(id)                       →  없으면 BusinessException(PRODUCT_NOT_FOUND)
 ```
-**DTO 변환은 Service 안에서 한다.** Controller에서 하면 계층 규약(B2)이 깨진다.
+**DTO 변환은 Service 안에서 한다.** Controller에서 하면 계층 규약(B1)이 깨진다.
 
 **4) `ProductController` 껍데기의 본문을 Service 호출로 바꾼다**
 
@@ -127,7 +163,7 @@ curl -s localhost:8080/api/products/999999999 | jq '.code, .statusCode'
 - **엔티티를 직접 반환하지 않는다.** 지연 로딩이 컨트롤러 밖에서 터지고, 비밀번호까지 새어 나갈 수 있다
 - **N+1은 지금 고치지 않는다.** T-019가 그 일이다. **지금 미리 고치면 "개선 전" 로그를 못 찍는다** — 발표 자료가 날아간다
 
-`확인:` 게이트의 상품 검사 4개 ok.
+`확인:` 게이트의 상품 검사 5개 ok.
 
 ---
 
@@ -224,10 +260,10 @@ curl -s "localhost:8080/api/products?page=0&size=12" > /dev/null
 **6) 로그 레벨을 원래대로 돌리고 응답이 안 바뀌었는지 확인한다**
 
 ```bash
-node seams/check-api.mjs   # 10/10 유지
+node seams/check-api.mjs   # 13/13 유지
 ```
 
-`확인:` 캡처 2장 + 숫자 2개 + 게이트 10/10. **API 응답은 한 글자도 바뀌지 않았다.**
+`확인:` 캡처 2장 + 숫자 2개 + 게이트 13/13. **API 응답은 한 글자도 바뀌지 않았다.**
 
 ---
 
@@ -239,7 +275,7 @@ D3     T-008 찜 토글
 D4     T-007 상품 등록 — BE-A FileStorageService 연결 (반나절) + 통합 대응
 D5     상품 마감
 D4   ★ 1차 통합 대응 — FE-B와 응답 형태를 맞춘다
-D6     마무리 · 03-REST-API설계서 확정
+D6     마무리 (03-REST-API설계서는 D4에 확정)
 D7   ★ T-019 N+1 해결 + 전후 캡처 2장 (이건 미루면 증거가 안 남는다)
 D8   ★ 시연 ①③ 구간 (상품 등록 · 검색→상세→찜→구매)
 D9     발표 API 계약·병렬 개발 슬라이드 + 성능 슬라이드 · 회고록

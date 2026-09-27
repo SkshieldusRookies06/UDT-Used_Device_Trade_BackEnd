@@ -8,6 +8,39 @@
 
 ---
 
+## 0. [9/27 개정] 연휴 뒤 첫날 내가 할 것 — BE-A (팀장)
+
+> **공통 절차 (전원)**
+> 1. `git checkout main && git pull` → 내 브랜치에서 `git merge main`
+> 2. 아래 "판정 테스트"를 IntelliJ에서 실행 → red 확인 (구현 전이니 red가 정상)
+> 3. 아래 표대로 고친다 → 테스트 green → **내 이름으로 커밋** → PR (PR 템플릿에 게이트 출력)
+> 4. 남의 파일은 안 건드린다. 필요하면 오너에게 요청 (표에 "승인" 표시된 한 줄은 예외)
+>
+> 근거: 9/27 팀장 전수 검증 `docs/참고/검증-0927.md` · SPEC §13 개정 이력. 게이트 `node seams/check-api.mjs`는 로그인 API(T-005) 전 **8/13**이 정상.
+
+### 이미 끝난 것 (연휴 중 팀장이 main에 넣음 — 회의에서 한 줄 공지)
+| 항목 | 내용 |
+|---|---|
+| 머지 | `be-jwt-filter` · `be-file` · `be-product-write` · `be-wish` · `be-transaction` → main. `be-product-read`·`be-transactioncontroller`·`be-transactionservice`는 닫음 |
+| 문서 | SPEC v1.0 확정(§1 확정 사항 · §2.2 유니크 제거 · §4.4 · §8 B5·B6 · §13 개정 이력) · 설계서·온보딩·로드맵·티켓 정합 수정 · README 프론트 링크 |
+| 검증 장치 | 게이트 10 → 13(거래 3개) · 목 서버 계약 정합 · SPEC §8 B5·B6 grep 규칙 · 인수 테스트 — 기능별 19개 클래스(`src/test/.../acceptance/{transaction,product,auth}/` · 클래스 이름 `[BE-X ①]` = 각자 0절 표 번호) · `pom.xml`에 `spring-boot-starter-webmvc-test` |
+| 공용 코드 | `security/CurrentUser`(로그인 사용자 id 헬퍼 — 컨트롤러 전부 이걸 쓴다) · `FileStorageService.delete()` + 빈 파일 `VALIDATION_ERROR` · `DisputeRepository.findByTransactionId()` |
+
+### 첫날 내가 할 것
+| 순서 | 무엇 | 왜 |
+|---|---|---|
+| 1 | 아침 스탠드업에서 표 한 장 배포: BE-B `T-005`, BE-C `T-007·T-008`, BE-D `T-009` 각 티켓의 `[9/27 개정]` 절 + 판정 테스트 이름 | 각자 자기 것만 보면 되게 |
+| 2 | **T-005(BE-B)와 T-009 개정 1번(BE-D)이 오전에 끝나게 챙긴다** | 로그인 API가 모두를 막고, 잔액 유실은 시연 ③을 깨뜨린다 |
+| 3 | 내 T-021(마이페이지 API 3개) 착수 — 파일 저장(T-023)은 이미 끝나 여유 있음. `/api/me/transactions?role=x`·누락 → 400 (목 서버와 맞춤) | 로드맵 D3 |
+| 4 | T-010 준비: 분쟁 접수 응답은 **`dto/DisputeResponse`**(BE-D가 T-009 개정 8번에서 만든다 · SPEC §4.8 모양)를 같이 쓴다. `markDisputed`는 BE-D 것 호출. 증빙 다운로드 두 경로(`/api/disputes/…` · `/admin/disputes/…`)는 **내 것**(03-REST 357행 정정됨) | 중복 DTO 방지 |
+| 5 | 머지 리뷰: 각 PR에서 (a) 판정 테스트 green 캡처 (b) 게이트 출력 (c) `git diff --stat` 한 화면 (d) 티켓 `[제약]` 밖 파일 없음 | 역할분담 §3.1 |
+
+### 알아 둘 것
+- `GlobalExceptionHandler`의 `Exception.class` 핸들러가 405·415를 500으로 감싼다. 계약 밖이라 그대로 뒀다 — 여유 있으면 `ResponseEntityExceptionHandler` 상속으로(내 파일).
+- `SPEC.md` 3행 `확인: (7명 이름)`과 설계서 `작성자 (이름)`, 온보딩 이름 칸 — **실명은 회의에서 채운다.**
+
+---
+
 ## 1. 한 줄로
 
 **D1~D2는 바닥을 깐다. D3부터는 내 기능이 있다.** D1 오전의 T-001이 전원의 선행이고, 엔티티·시드·계약(`SPEC.md`)이 내 것이다.
@@ -156,7 +189,7 @@ push 직후 GitHub에서 두 리포 모두 **`main` 보호 + Squash merge만 허
 한 명씩 위 2~5를 돌리게 하고, **막히면 옆에 붙어서 같이 본다.**
 포트가 사람마다 다를 수 있으니 각자 `SELECT @@port;` 를 먼저 돌리게 한다.
 
-`확인:` **7명 전원이 자기 PC에서 게이트 8/10를 봤다.** 이게 D1 오전의 완료 조건이다.
+`확인:` **7명 전원이 자기 PC에서 게이트 8/13를 봤다.** 이게 D1 오전의 완료 조건이다.
 
 ---
 
@@ -195,9 +228,9 @@ mysql -u udt -pudt -P 3307 udt -e "SELECT COUNT(*) FROM products; SELECT status,
 > 기억으로 쓰지 않는다. `entity/*.java`를 열어 놓고 옮긴다.
 
 **6) Repository를 인계한다** — 채널에 한 줄 올린다.
-"`ProductRepository`·`WishRepository`·`CategoryRepository` → BE-C, `TransactionRepository`·`DisputeRepository` → BE-D 넘깁니다."
+"`ProductRepository`·`WishRepository`·`CategoryRepository` → BE-C, `TransactionRepository` → BE-D 넘깁니다. `DisputeRepository`·`DisputeFileRepository`는 제가(T-010) 계속 가집니다."
 
-`확인:` 게이트 8/10 유지 · 위 grep 두 개 통과 · 인계 공지 완료.
+`확인:` 게이트 8/13 유지 · 위 grep 두 개 통과 · 인계 공지 완료.
 
 ---
 

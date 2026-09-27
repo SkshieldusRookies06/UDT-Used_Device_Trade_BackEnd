@@ -1,13 +1,12 @@
 # UDT — 중고 전자기기 안전거래 플랫폼 · SPEC
 
-**v0.2 초안 (D1 회의 안건) · 2026-09-21 작성 · 확인: (전원 이름)**
+**v1.0 확정 · 2026-09-21 작성 · 2026-09-27 개정(전수 검증 반영 · 말미 개정 이력) · 확인: (7명 이름 — D1 회의 후 채운다)**
 
 > **이 파일의 정본은 `UDT-Used_Device_Trade-backend` 리포에만 있다.**
 > 프론트 리포에는 복사하지 않는다 — 복사본은 반드시 낡는다(§12).
 
 > **이 문서가 정본이다.** 코드·다른 문서와 어긋나면 이 문서가 이긴다.
 > §0 확정값 표와 본문이 어긋나면 **§0 표가 이긴다.**
-> `[초안 — D1 회의 안건]` 표시가 붙은 절은 팀 합의 전까지 확정이 아니다.
 
 ---
 
@@ -100,10 +99,11 @@
 ### 9. 환경
 배포 없음 · 로컬 완결 · 지원 브라우저 **Chrome 1종** · 시연은 **시연 PC 1대에서 프로세스 2개**(Vite dev + Spring).
 
-### OPEN
-- (확정) 팀 인원 **7명 — 백엔드 4 / 프론트 3**
-- `OPEN: D1` 서비스명 `UDT` 확정 여부 (대안: 안심거래, 체크딜)
-- `OPEN: D1 강사 확인` 개인 회고록의 제출 형식(제출물 목록에 있음 → 일단 만든다)
+### 확정 사항 (D1 회의)
+- 팀 인원 **7명 — 백엔드 4 / 프론트 3**
+- 서비스명 **`UDT`** (대안 안심거래·체크딜은 채택하지 않음 — 리포·문서·발표 전부 UDT)
+- 개인 회고록은 제출물 목록에 있으므로 `docs/회고록/retro-<이름>.md`로 만든다 (형식은 `retro-양식.md`)
+- **JWT 토큰 규격** — HS256 · `sub`=회원 ID · claims `role`·`nickname` · 만료 **24시간**(`app.jwt.expiration-seconds=86400`) · **재발급 없음** · 401이면 프론트 인터셉터가 로그아웃 후 `/login` (§3.4)
 
 ---
 
@@ -124,7 +124,7 @@
 | `Product` | User N:1 · Category N:1 | status · priceKrw · conditionGrade |
 | `ProductImage` | Product N:1 | **1:N** · sortOrder · 최대 5장 |
 | `Wish` | User N:1 · Product N:1 | **N:M 조인 엔티티** · `unique(user_id, product_id)` |
-| `Transaction` | Product **1:1** · buyer(User) N:1 | status · amountKrw · courier · trackingNo · `unique(product_id)` |
+| `Transaction` | Product N:1(**진행 중은 상품당 최대 1건** — §2.4 조건부 UPDATE가 보장 · 유니크 아님) · buyer(User) N:1 | status · amountKrw · courier · trackingNo · `idx_transactions_product` |
 | `Dispute` | Transaction **1:1** | status · reason · adminMemo · resolvedAt |
 | `DisputeFile` | Dispute N:1 | **1:N** · 증빙 파일(다운로드 대상) |
 | `Review` | Transaction **1:1** · writer/target N:1 | **P2 — D7 여유 시.** rating 1~5 |
@@ -349,7 +349,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 - `Content-Type: multipart/form-data` · 파트 `product`(JSON) + `images`(파일 0~5)
 - 파일 제약: **jpg/png/webp · 각 5MB · 최대 5장** — 서버가 검증한다(프론트 검증은 왕복 절약용)
 - 성공 **201** · `data`는 4.3과 같은 객체 · `status`는 항상 **`INSPECTING`**
-- 에러: 400 `VALIDATION_ERROR`(+`fields[]`) · 400 `FILE_TYPE_NOT_ALLOWED` · 400 `FILE_TOO_LARGE` · 401
+- 에러: 400 `VALIDATION_ERROR`(+`fields[]`) · 400 `FILE_TYPE_NOT_ALLOWED` · 400 `FILE_TOO_LARGE` · 400 `FILE_COUNT_EXCEEDED`(6장 이상) · 401
 
 > **등록 직후 목록에 안 보이는 것이 정상이다**(검수 대기). 화면에 "관리자 검수 후 판매중으로
 > 전환됩니다" 문구를 반드시 띄운다 — 없으면 시연에서 고장으로 보인다.
@@ -548,6 +548,14 @@ B3. Service에 웹 타입(HttpServletRequest·ResponseEntity·Model) 금지.
 B4. 상태 전이(Product.changeStatus · Transaction.transition)는 TransactionService에서만 (§2.5).
     검사: grep -rl "changeStatus(\|\.transition(" src/main/java --include='*.java' \
           | grep -v "entity/\|TransactionService"                                     (무출력)
+B5. 관리자 전용 처리(검수 승인/반려 · 강제 환불/확정)는 REST(`/api/admin/**`)로 열지 않는다 —
+    관리자 Thymeleaf 컨트롤러가 Service를 직접 호출한다(§3.2). `/api/**` 체인은 역할을 검사하지 않으므로
+    열리는 순간 일반 회원이 호출할 수 있다.
+    검사: grep -rn '"/api/admin' src/main/java                                         (무출력)
+B6. 로그인 사용자 id는 `security/CurrentUser.id()`·`idOrNull()`로만 꺼낸다. 컨트롤러가 userId를
+    @RequestParam·@RequestBody로 받지 않는다(위조 가능).
+    검사: grep -rnE "@RequestParam[^)]*(userId|buyerId|sellerId)|Long (userId|sellerId|buyerId) = null" \
+          src/main/java --include='*Controller.java'                                   (무출력)
 ```
 > B3이 하이브리드의 핵심이다 — Service가 웹을 모르므로 **REST 컨트롤러와 Thymeleaf 컨트롤러가
 > 같은 Service를 부른다.** 발표 Q&A "MVC인데 View는 어디 있나"의 답이 이것이다:
@@ -673,3 +681,18 @@ main에 들어간다.
 
 **`UDT-Used_Device_Trade-backend`를 메인 리포로 제출한다**(문서 13종이 여기 있다).
 양쪽 README 최상단에 상대 리포 링크와 "이 프로젝트는 리포 2개로 구성" 한 줄을 넣는다.
+
+---
+
+## §13 개정 이력
+
+| 날짜 | 절 | 바뀐 것 | 이유 |
+|---|---|---|---|
+| 2026-09-27 | 머리말 · §1 | `v0.2 초안` → `v1.0 확정`. OPEN 절을 "확정 사항"으로: 서비스명 UDT · 회고록 형식 · **JWT 토큰 규격(HS256 · 24h · 재발급 없음 · claims role·nickname)** | 초안 표시가 제출본에 남으면 안 된다. JWT 규격이 파생본(`03-REST-API설계서`)에만 있고 정본에 없어 T-004·로드맵이 빈 곳을 가리키고 있었다 |
+| 2026-09-27 | §2.2 | `Transaction`의 `unique(product_id)` 삭제 → `idx_transactions_product` | §2.4·§6과 모순. 환불(BR-07) 후 재구매가 막힌다. `T-002`·로드맵의 "UNIQUE 5종·INDEX 2종"도 4·3으로 |
+| 2026-09-27 | §4.4 | 에러 목록에 `FILE_COUNT_EXCEEDED` 추가 | §5와 T-007에는 있는데 §4.4에 빠져 있었다 |
+| 2026-09-27 | §8 | **B5** 관리자 처리 REST 금지(`/api/admin/**`) · **B6** 로그인 사용자 id는 `CurrentUser`로만, `@RequestParam userId` 금지 — grep 검사 포함 | 9/27 검증에서 `be-transaction`이 `/api/admin/…/force-refund`를 열었고(일반 회원 호출 가능) 컨트롤러가 `@RequestParam buyerId`를 받았다. 문서(§2.5)에 있어도 안 읽히므로 기계 검사로 |
+| 2026-09-27 | 게이트 | `seams/check-api.mjs` 10 → **13**(거래 3개 · T-022 앞당김) · 목 서버 계약 정합(구매 시 잔액 차감·amountKrw·`dispute:null`·송장 검증·`role` 누락 400·signup 응답 필드) | 거래 API가 계약과 달라도(POST/PATCH · 봉투 누락) 게이트가 못 잡았다 |
+| 2026-09-27 | 티켓 | T-009·T-007·T-008·T-005에 `[9/27 개정]` 절 — 코드와 계약의 차이·이유·완료 판정 테스트. 인수 테스트 추가(9/27 기능별로 분리 — 아래 행) | 지시서 대신 **테스트가 완료 판정**. 근거 목록은 `docs/참고/검증-0927.md` |
+| 2026-09-27 | 문서 정합 | 분쟁 증빙 오너 BE-D→BE-A(`03-REST:357`·`BE-B.md`) · 티켓 선행 정정(T-009·T-005·T-010·T-000 표) · `T-004` 브랜치명 · `T-008` D5→D3 · 게이트 개수 10/10→13/13 · `README`·`BE-B.md`·`아키텍처`의 "admin 없음"→`AdminLoginController` 있음 · `BE-D.md` 예시의 `clearAutomatically` 권고 삭제 · README 프론트 리포 실제 링크 | 팀원이 잘못 만들 수 있는 모순들 |
+| 2026-09-27 | 테스트 | 인수 테스트를 티켓 단위(4파일)에서 **기능 단위 19클래스**로 분리 — `acceptance/transaction`(BE-D 11) · `product`(BE-C 5) · `auth`(BE-B 3). 클래스 이름 `[BE-X ①②]` = `onboarding/역할별/BE-X.md` 0절 표 번호. 아직 없는 메서드·클래스는 리플렉션으로 찾아 **구현 전에도 main이 컴파일된다**. 업로드 임시 폴더를 JVM 단위로 바꿈(@TempDir은 클래스마다 지워져 컨텍스트를 공유하는 두 번째 클래스부터 업로드가 깨졌다) | 한 파일에 여러 개정이 섞여 있으면 red 하나가 어느 줄 몫인지 안 보인다. 한 줄 고치고 그 클래스만 돌려 초록을 확인하게 |

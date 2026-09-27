@@ -8,9 +8,42 @@
 
 ---
 
+## 0. [9/27 개정] 연휴 뒤 첫날 내가 할 것 — BE-B
+
+> **공통 절차 (전원)**
+> 1. `git checkout main && git pull` → 내 브랜치에서 `git merge main`
+> 2. 아래 "판정 테스트"를 IntelliJ에서 실행 → red 확인 (구현 전이니 red가 정상)
+> 3. 아래 표대로 고친다 → 테스트 green → **내 이름으로 커밋** → PR (PR 템플릿에 게이트 출력)
+> 4. 남의 파일은 안 건드린다. 필요하면 오너에게 요청 (표에 "승인" 표시된 한 줄은 예외)
+>
+> 근거: 9/27 팀장 전수 검증 `docs/참고/검증-0927.md` · SPEC §13 개정 이력. 게이트 `node seams/check-api.mjs`는 로그인 API(T-005) 전 **8/13**이 정상.
+
+**판정 테스트 — 기능별 3개 클래스** (`src/test/java/com/rookies6/udt/acceptance/auth/`) + 게이트 **13/13**. 클래스 이름 앞 `[BE-B ①②]`가 아래 "바꿀 것" 표의 순서 번호다. **한 줄 고치면 그 번호가 붙은 클래스만 돌려 본다**(IntelliJ 클래스 옆 ▶). `(지킴)`이 붙은 테스트는 지금도 초록 — 고치는 동안 초록을 유지하는 것이 판정이다.
+
+| 표 번호 | 기능 | 테스트 클래스 | 개수 | 지금 red |
+|---|---|---|---|---|
+| ① | JWT 필터 등록 — Bearer 토큰이 인증으로 바뀐다 | `JwtFilterRegistrationTest` | 3 | 1 |
+| ② | 토큰 claims `nickname` · 2-인자 유지 (스프링 없이 1초) | `JwtNicknameClaimTest` | 2 | 1 |
+| ③ | 가입 201·409 · 로그인 200·401 · `/api/me` | `AuthApiTest` — 가입 요청 바디 `{email, password, nickname}`(03-REST §3) | 5 | 5 |
+| ④ | 끝 신호 | `node seams/check-api.mjs` | 13 | 5 |
+| | **합계** — `auth` 패키지 우클릭 → Run | | **10** | **7** |
+
+| 순서 | 파일 | 있었던 것 | 바꿀 것 | 왜 |
+|---|---|---|---|---|
+| 1 | `config/SecurityConfig.java` | `JwtAuthenticationFilter`가 어느 체인에도 **등록돼 있지 않다** (T-004는 필터를 만들기만 했다) | `apiFilterChain(HttpSecurity http, CorsConfigurationSource corsSource, JwtTokenProvider jwtTokenProvider)`로 인자 추가 → `.exceptionHandling(...)` 뒤에 `.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)` | 이게 없으면 토큰을 보내도 항상 401. `CurrentUser`를 쓰는 컨트롤러 6곳이 전부 여기 걸려 있다 |
+| 2 | `security/JwtTokenProvider.java` | `createToken(userId, role)` — claim이 `role`뿐 | `createToken(Long userId, String role, String nickname)` **오버로드 추가**, `.claim("nickname", nickname)`. **기존 2-인자는 지우지 말고** 3-인자에 `null`로 위임 | SPEC §1 토큰 규격: claims `role·nickname`. 인수 테스트가 2-인자를 쓴다 |
+| 3 | `security/CustomUserDetailsService` · `service/AuthService` · `controller/AuthController` | 없음 | 원래 T-005 그대로. `login()`은 `createToken(id, role, nickname)` 세 인자. 응답 `user.balanceKrw`는 **DB 현재값** | 게이트 거래 검사가 구매 전후 `/api/me` 잔액 차이로 잔액 유실 회귀를 본다 |
+| 4 | — | — | 끝나면 채널에 "게이트 13/13, 목 꺼도 됩니다" | D3 팀 이정표 |
+
+**손대지 않는 것:** `security/CurrentUser.java`(공용 · 팀장) — 필터가 principal에 **userId 문자열**을 넣으므로 1번이 끝나면 그대로 동작한다.
+
+**T-018(관리자 화면)에서 알아 둘 것:** 강제 환불/확정은 REST(`/api/admin/**`)가 **없다**(SPEC §8 B5). 내 Thymeleaf 컨트롤러가 `TransactionService.forceRefund/forceConfirm`을 직접 호출한다. 검수 승인/반려도 `approveInspection/rejectInspection` 호출.
+
+---
+
 ## 1. 한 줄로
 
-**로그인이 되면 게이트가 10/10가 된다.** 그게 D3의 첫 이정표고, 그때까지 팀 전체가 목 서버 위에서 산다.
+**로그인이 되면 게이트가 13/13가 된다.** 그게 D3의 첫 이정표고, 그때까지 팀 전체가 목 서버 위에서 산다.
 그리고 **관리자 화면(Thymeleaf)은 나 혼자만 만든다** — 서버 렌더링 화면이 이 프로젝트에 있다는 걸 보여 주는 게 내 파트다.
 
 ---
@@ -64,8 +97,8 @@
 
 | 티켓 | 언제 | 선행 | 끝났다는 증거 |
 |---|---|---|---|
-| [T-004 JWT 발급·검증](../../tasks/T-004-JWT-발급검증.md) | D1~D2 | T-001 | 테스트 전체 통과(IntelliJ) · 게이트 8/10 (login 관련 2개만 red)가 정상 |
-| [T-005 Security 완성·로그인 API](../../tasks/T-005-Security-완성.md) | **D3** | T-004 | **게이트 10/10 ok** ★ |
+| [T-004 JWT 발급·검증](../../tasks/T-004-JWT-발급검증.md) | D1~D2 | T-001 | 테스트 전체 통과(IntelliJ) · 게이트 8/13 (login 관련 5개가 red)가 정상 |
+| [T-005 Security 완성·로그인 API](../../tasks/T-005-Security-완성.md) | **D3** | T-004 | **게이트 13/13 ok** ★ |
 | [T-018 관리자 Thymeleaf](../../tasks/T-018-관리자-Thymeleaf.md) | D6~D7 | T-005 | 브라우저에서 검수 승인이 실제로 된다 |
 
 **T-005가 D3의 팀 이정표다.** 이게 green이 되는 순간 프론트가 목을 끄고 실서버로 옮긴다.
@@ -112,9 +145,9 @@ security/JwtTokenProvider.java
 - 재발급(refresh)을 하는가 — **안 하는 쪽을 권한다.** 2주 프로젝트에 리프레시 토큰은 시간을 먹는다
 - 401을 받은 화면이 무엇을 하는가 → 현재 프론트 인터셉터는 **로그아웃 후 `/login`으로 보낸다**
 
-합의한 내용을 `SPEC.md` §1 OPEN에 적고 BE-A에게 개정을 요청한다. **적기 전까지 그 합의는 무효다.**
+합의한 내용은 `SPEC.md` §1 "확정 사항"의 JWT 토큰 규격 줄에 있다(HS256 · 24h · 재발급 없음). 바꾸려면 BE-A에게 SPEC 개정을 요청한다. **적히기 전까지 그 합의는 무효다.**
 
-`확인:` 테스트 전체 통과(IntelliJ) · 게이트는 여전히 8/10 (login 관련 2개만 red · 아직 정상).
+`확인:` 테스트 전체 통과(IntelliJ) · 게이트는 여전히 8/13 (login 관련 5개가 red · 아직 정상).
 
 ---
 
@@ -167,7 +200,7 @@ curl -s localhost:8080/api/me -H "Authorization: Bearer $TOKEN" | jq
 node seams/check-api.mjs
 ```
 
-`확인:` **10/10 ok.** 이 순간 채널에 올린다 — "게이트 10/10입니다. 프론트는 목을 꺼도 됩니다."
+`확인:` **13/13 ok.** 이 순간 채널에 올린다 — "게이트 13/13입니다. 프론트는 목을 꺼도 됩니다."
 **이게 D3의 팀 이정표다.**
 
 ---
@@ -190,7 +223,7 @@ POST /admin/products/{id}/reject  반려(+사유) → BR-02 → redirect
 
 ```
 GET  /admin/disputes                    분쟁 목록
-GET  /admin/disputes/{id}/files/{fid}   증빙 다운로드 ← 오너는 BE-D(T-010). 내 템플릿은 링크만 건다
+GET  /admin/disputes/{id}/files/{fid}   증빙 다운로드 ← 오너는 BE-A(T-010). 내 템플릿은 링크만 건다
 POST /admin/disputes/{id}/refund        BR-07 강제 환불
 POST /admin/disputes/{id}/confirm       BR-08 강제 확정
 ```
@@ -226,7 +259,7 @@ localhost:8080/admin  →  admin@udt.test / Admin1234!
 
 ```
 D1~D2  T-004 JWT 발급·검증
-D3   ★ T-005 Security 완성 · 로그인 API → 게이트 10/10 (팀 첫 이정표)
+D3   ★ T-005 Security 완성 · 로그인 API → 게이트 13/13 (팀 첫 이정표)
 D4   ★ 1차 통합 대응 — **인증이 가장 먼저 터진다. 이날은 다른 걸 잡지 않는다**
 D5     T-018 준비 (화면 2장 초안 · 폼 흐름 정리)
 D6~D7  T-018 관리자 화면 2장 + 폼 처리
@@ -257,7 +290,7 @@ D10    리허설
 # 기동
 IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 
-# 내 완료 증명 — T-005 끝나면 10/10 여야 한다
+# 내 완료 증명 — T-005 끝나면 13/13 여야 한다
 node seams/check-api.mjs
 
 # 로그인 직접 확인
@@ -287,7 +320,7 @@ curl -s localhost:8080/api/me -H "Authorization: Bearer $TOKEN" | jq
 | 로그인 실패가 404로 나간다 | 이메일 존재 여부가 드러난다 | **401 `INVALID_CREDENTIALS`로 통일** — 계정 열거 방지 |
 | 토큰이 갑자기 다 무효 | secret이 매 기동마다 바뀐다 | `${JWT_SECRET:...}` 고정값 확인 |
 | 관리자로 로그인했는데 `/admin`이 403 | `hasRole("ADMIN")`은 권한 문자열이 **`ROLE_ADMIN`**이어야 통과한다 | `UserDetailsService`에서 `ROLE_` 접두어를 붙인다 (`SimpleGrantedAuthority("ROLE_" + role)`) |
-| `/admin/login`이 404 | `loginPage("/admin/login")`은 **그 페이지를 서버가 그려 줘야** 한다 | T-018에서 `@GetMapping("/admin/login")` → `admin/login` 템플릿. **그 전까지 404가 정상** |
+| `/admin/login`이 404 | `loginPage("/admin/login")`은 **그 페이지를 서버가 그려 줘야** 한다 | `admin/AdminLoginController`(GET `/admin/login` → `admin/login` 템플릿)가 **골격에 이미 있다.** 404면 템플릿 경로·Thymeleaf 의존성을 본다 |
 
 ---
 

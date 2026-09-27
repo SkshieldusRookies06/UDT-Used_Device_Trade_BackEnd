@@ -46,7 +46,7 @@ GET /api/categories → data 는 배열
 - [ ] `?q=__none__` 이 **`content: []` · `totalElements: 0` · HTTP 200**
 - [ ] `?size=101` 이 100으로 잘린다
 - [ ] **검수대기·거래중 상품이 목록에 나오지 않는다**
-- [ ] `node seams/check-api.mjs` 의 상품 관련 검사 4종이 ok
+- [ ] `node seams/check-api.mjs` 의 상품 관련 검사 5종이 ok
 
 ## [제약]
 

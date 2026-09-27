@@ -1,7 +1,7 @@
 # UDT — 백엔드 (메인 리포)
 
 > **이 프로젝트는 리포 2개로 구성됩니다.**
-> 프론트엔드: [UDT-Used_Device_Trade-frontend](https://github.com/<조직>/UDT-Used_Device_Trade-frontend) ← 링크를 채워 주세요
+> 프론트엔드: [UDT-Used_Device_Trade_Frontend](https://github.com/SkshieldusRookies06/UDT-Used_Device_Trade_Frontend)
 > **계약 정본 `SPEC.md`와 제출 문서 `docs/`는 이 리포에 있습니다.**
 
 중고 거래의 "돈 보내고 물건을 못 받는" 문제를, **관리자 검수 → 가상 에스크로 →
@@ -100,7 +100,7 @@ UDT-Used_Device_Trade-backend/
     │   ├── dto/            리소스 접두어가 오너
     │   ├── security/       (아직 없음 — T-004 BE-B가 만든다)
     │   ├── service/        (아직 없음 — 각 오너가 만든다)
-    │   └── admin/          (아직 없음 — T-018 BE-B가 만든다)
+    │   └── admin/          AdminLoginController(GET /admin/login)만 있음 — 검수·분쟁 화면은 T-018 BE-B
     └── resources/
         ├── application.yml · application-local.yml · application-prod.yml · data.sql
         └── templates/      layout/base · fragments/nav · admin/login·products·disputes
@@ -168,7 +168,7 @@ UDT-Used_Device_Trade-backend/
 main                정본
  └── be-<작업명>    작업 브랜치
 
-커밋   feat|fix|docs|refactor|chore(<범위>): 한 줄 [T-###]
+커밋   feat|fix|docs|refactor|chore|test(<범위>): 한 줄 [T-###]
        예) feat(product): 상품 목록 검색·페이징 API [T-006]
 ```
 
@@ -190,7 +190,7 @@ main                정본
 | BE-D | **`TransactionService`(상태 전이 단독 오너 · BR-01~08 + `markDisputed`)** · `TransactionController` · 거래 테스트·게이트 확장(T-022) |
 
 > **기동 직후 `check-api`는 10개 중 8개가 ok다.** RED 2개(`POST /api/auth/login (자격 오류)` · `로그인 → 토큰 → /api/me`)는
-> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 10/10가 된다. 8개보다 적으면 다른 문제다.
+> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 13/13가 된다(거래 3개도 로그인이 있어야 돈다). 8개보다 적으면 다른 문제다.
 >
 > `ProductController`·`CategoryController`는 **하드코딩 껍데기**다(`// TODO(T-006)` 표시).
 > URL과 응답 형태는 계약이므로 그대로 두고 **본문만** Service 연결로 바꾼다.
@@ -205,5 +205,5 @@ main                정본
 2. **Spring Boot `4.0.8` / Java 17**로 잡아 뒀다(수업과 동일). 다르면 `pom.xml`의 parent
    `<version>` 한 줄만 바꾼다. Lombok을 쓰므로 IntelliJ **Enable annotation processing**을 켠다.
 3. **컴파일·기동은 검증됐다** — 2026-09-22 Windows · JDK 24 · IntelliJ · MariaDB 10.11.18(3307)에서
-   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/10 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
+   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/13 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
    `@Primary`로 잡았다(`onboarding/backend.md` 에러 색인).

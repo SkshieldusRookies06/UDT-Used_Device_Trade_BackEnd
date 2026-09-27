@@ -8,6 +8,58 @@
 
 ---
 
+## 0. [9/27 개정] 연휴 뒤 첫날 내가 할 것 — BE-D · **가장 먼저**
+
+> **공통 절차 (전원)**
+> 1. `git checkout main && git pull` → 내 브랜치에서 `git merge main`
+> 2. 아래 "판정 테스트"를 IntelliJ에서 실행 → red 확인 (구현 전이니 red가 정상)
+> 3. 아래 표대로 고친다 → 테스트 green → **내 이름으로 커밋** → PR (PR 템플릿에 게이트 출력)
+> 4. 남의 파일은 안 건드린다. 필요하면 오너에게 요청 (표에 "승인" 표시된 한 줄은 예외)
+>
+> 근거: 9/27 팀장 전수 검증 `docs/참고/검증-0927.md` · SPEC §13 개정 이력. 게이트 `node seams/check-api.mjs`는 로그인 API(T-005) 전 **8/13**이 정상.
+
+**판정 테스트 — 기능별 11개 클래스** (`src/test/java/com/rookies6/udt/acceptance/transaction/`). 클래스 이름 앞 `[BE-D ①②]`가 아래 "바꿀 것" 표의 순서 번호다. **한 줄 고치면 그 번호가 붙은 클래스만 돌려 본다**(IntelliJ 클래스 옆 ▶). `(지킴)`이 붙은 테스트는 지금도 초록 — 고치는 동안 초록을 유지하는 것이 판정이다.
+
+| 표 번호 | 기능 | 테스트 클래스 | 개수 | 지금 red |
+|---|---|---|---|---|
+| ①② | 구매 — 잔액 차감 · 상품 상태 (실제 DB) | `PurchaseBalanceTest` | 4 | 1 · ①만 고치면 ② 테스트가 빨개진다 → ②까지 하면 초록 |
+| ③ | 강제 환불·확정 — 분쟁 RESOLVED | `ForceResolutionDisputeTest` | 3 | 2 |
+| ④⑬ | 거래 상세 API | `TransactionDetailApiTest` | 5 | 5 |
+| ⑤ | 환불 후 재구매 — `findByProductId` List | `RepurchaseAfterRefundTest` | 1 | 1 |
+| ⑥ | 송장 입력값 (DTO만 · 스프링 없이 1초) | `ShippingRequestValidationTest` | 5 | 4 |
+| ⑦⑧ | 응답 DTO — `DisputeResponse` 신설 · `TransactionResponse` 필드 | `TransactionResponseShapeTest` | 3 | 3 |
+| ⑨⑩⑪ | 구매 API | `PurchaseApiTest` | 3 | 2 |
+| ⑥⑨⑩⑪ | 송장 입력 API | `ShippingApiTest` | 3 | 3 |
+| ⑨⑩⑪ | 구매 확정 API | `ConfirmApiTest` | 3 | 3 |
+| ⑫ | 관리자 REST 제거 | `AdminRestRemovedTest` | 2 | 2 |
+| ⑭ | 기존 단위 테스트 | `service/TransactionServiceTest` | 8 | 0 — 고친 뒤에도 초록 유지 (⑭는 리뷰로 확인) |
+| | **합계** — `transaction` 패키지 우클릭 → Run | | **32 + 8** | **26** |
+
+**정본 브랜치는 `be-transaction` 하나.** `be-transactioncontroller`·`be-transactionservice`는 닫혔다.
+
+| 순서 | 파일 | 있었던 것 | 바꿀 것 | 왜 |
+|---|---|---|---|---|
+| 1 | `repository/ProductRepository.java` (BE-C 파일 · 승인됨) | `transition()`이 `@Modifying(clearAutomatically = true)` | `@Modifying`만 남기고 옵션·주석 삭제 | 벌크 UPDATE 뒤 컨텍스트가 비워져 `buyer.withdraw()`가 **DB에 안 들어간다 → 구매해도 잔액이 안 빠진다.** Mockito 테스트는 못 잡았다. (`BE-D.md` 5절 예시가 이 옵션을 권장했던 것이 원인 — 예시도 고쳐 둠) |
+| 2 | `service/TransactionService.java` `purchase()` | `transition()` 뒤 바로 `withdraw` | `transition()`이 1을 돌려준 직후 `product.changeStatus(ProductStatus.IN_TRADE);` 한 줄 | 벌크 UPDATE는 메모리 객체를 안 바꾼다. 안 맞춰 두면 다른 이유로 flush될 때 `ON_SALE`을 되쓴다 |
+| 3 | `service/TransactionService.java` | `DisputeRepository` 없음 | 필드 추가(`@RequiredArgsConstructor`). `forceRefund/forceConfirm`에서 `disputeRepository.findByTransactionId(txId)`로 찾아 RESOLVED가 아니면 `dispute.resolve("관리자 강제 환불"/"관리자 강제 확정", OffsetDateTime.now())` — private `resolveDispute(tx, memo)` 하나로 공유. 반환 `TransactionResponse.from(tx, dispute)` | BR-07·08 네 번째 줄 `Dispute → RESOLVED`가 빠져 있었다. 환불됐는데 분쟁 목록에 OPEN으로 남는다 |
+| 4 | `service/TransactionService.java` | `GET /api/transactions/{id}` 서비스 없음 | `@Transactional(readOnly = true) getDetail(Long requesterId, Long txId)` — 구매자도 판매자도 아니면 403 `TRANSACTION_FORBIDDEN`, 분쟁은 `findByTransactionId`, `from(tx, dispute)` | SPEC §4.9 · FE-C 거래 상세 첫 호출 |
+| 5 | `repository/TransactionRepository.java` | `Optional<Transaction> findByProductId` | `List<Transaction> findByProductId` | 환불 후 재구매(§2.4) → 상품당 거래 다건. Optional이면 2건에서 예외 |
+| 6 | `dto/ShippingRequest.java` | `trackingNo` `@NotBlank`뿐 | `@Pattern(regexp = "\\d{8,20}", message = "송장번호는 숫자 8~20자리입니다")` · `courier` `@Size(max=30)` | §4.7 · `abc`가 통과되고 있었다 |
+| 7 | `dto/DisputeResponse.java` **신설** | 없음 | record `id, transactionId, status, reason, List<FileItem> files, createdAt` · 중첩 `FileItem(id, originalName)` · `static from(Dispute)`. **BE-A(T-010)도 이걸 쓴다 — 만들면 공지** | §4.8 분쟁 객체 |
+| 8 | `dto/TransactionResponse.java` | `productTitle`·`buyerNickname`·`sellerNickname` 없음 | 컴포넌트 순서 `id, productId, productTitle, buyerId, sellerId, buyerNickname, sellerNickname, amountKrw, status, courier, trackingNo, createdAt, confirmedAt, DisputeResponse dispute`. `from(tx)` → `from(tx, null)`, `from(tx, dispute)` 추가 | §4.5 예시 필드. 화면이 상품명·닉네임을 그린다 |
+| 9 | `controller/TransactionController.java` | `@PostMapping` 송장·확정 | **`@PatchMapping`** | §4.6·§4.7 · 프론트도 PATCH → 405 |
+| 10 | 〃 | 응답이 DTO 날것 | 전부 `ApiResponse.of(response, "…")`. purchase는 `@ResponseStatus(CREATED)` 유지 | §0 공통 봉투 · 프론트 인터셉터가 `res.data.data`를 꺼낸다 |
+| 11 | 〃 | `@RequestParam Long buyerId/sellerId` | 전부 삭제 → `CurrentUser.id()` (import `com.rookies6.udt.security.CurrentUser`). `RequestParam` import도 제거 | §8 B6 · 아무 id나 넣어 남의 거래 조작 |
+| 12 | 〃 | `/api/admin/transactions/{id}/force-refund`·`force-confirm` | **삭제.** 클래스 주석에 "관리자 처리는 T-018 Thymeleaf 컨트롤러가 Service 직접 호출" | §2.5·§3.2·§8 B5 · `/api/**` 체인은 역할을 안 봐서 **일반 회원이 강제 환불 가능** |
+| 13 | 〃 | `GET /api/transactions/{id}` 없음 | `@GetMapping` 추가 → `getDetail(CurrentUser.id(), id)` | 4번 |
+| 14 | `test/.../TransactionServiceTest.java` | `DisputeRepository` mock 없음 | `@Mock private DisputeRepository disputeRepository;` 추가. `같은_상품을_두_번…`은 첫 구매 뒤 `setStatus(product, ProductStatus.ON_SALE);`을 넣어 두 번째가 `transition()==0` 경로를 타게 | 3번 뒤 `@InjectMocks`가 null · 2번 뒤 원래 테스트가 그 경로를 안 탄다 |
+| 15 | `product-repo.patch` (리포 루트) | `be-transaction`에 실수로 커밋된 패치 파일 | `git rm product-repo.patch` — 커밋 메시지 `chore: 실수로 커밋된 product-repo.patch 삭제 [T-009]` | 코드가 아닌 작업 파일이 main에 남는다. 내가 올린 파일이라 내가 지운다 |
+
+**확인:** `grep -rn clearAutomatically src/main/java` 무출력 · `grep -rn '"/api/admin' src/main/java` 무출력 · `grep -rnE "@RequestParam[^)]*(buyerId|sellerId)" src/main/java` 무출력 · 테스트 3종 green.
+**커밋 순서 권장 (한 커밋 = 한 기능 · 메시지에 표 번호):** ①② → `PurchaseBalanceTest` 초록 · ⑤⑭ → `RepurchaseAfterRefundTest` · ③ → `ForceResolutionDisputeTest` · ⑥⑦⑧ → `ShippingRequestValidationTest`·`TransactionResponseShapeTest` · ④⑨~⑬ → API 5개 클래스 · 마지막에 `transaction` 패키지 전체 + 게이트.
+
+---
+
 ## 1. 한 줄로
 
 **이 프로젝트가 존재하는 이유가 내 파트다.** "돈 보내고 물건을 못 받는" 문제를 상태 머신으로 푸는 것.
@@ -65,7 +117,7 @@
 
 | 티켓 | 언제 | 선행 | 끝났다는 증거 |
 |---|---|---|---|
-| [T-009 거래 상태 머신](../../tasks/T-009-거래-상태머신.md) | D1~D3 | T-002·T-003 | **BR-01~BR-08 8개 규칙이 전부 테스트로 증명된다** |
+| [T-009 거래 상태 머신](../../tasks/T-009-거래-상태머신.md) | D1~D3 | T-002 | **BR-01~BR-08 8개 규칙이 전부 테스트로 증명된다** |
 | [T-003 공통 예외·봉투 검증](../../tasks/T-003-공통예외-검증.md) | **D4** | T-009 | 에러 4종이 봉투대로 · `common/` 수정은 BE-A에게 diff로 |
 | [T-022 거래 게이트 확장·테스트](../../tasks/T-022-거래-게이트확장-테스트.md) | **D5~D6** | T-009 · T-021 | 게이트 **13/13**(실서버·목 양쪽) · 상태 머신 엣지 테스트 통과 |
 
@@ -78,7 +130,7 @@
 ## 5. 내 티켓 — 하나씩 어떻게 하나
 
 > 아래는 **티켓을 실제로 어떻게 하는가**다. 순서대로 하면 된다.
-> 내 티켓은 2개뿐이지만 **T-009가 이 프로젝트에서 가장 무거운 작업**이다. 시간을 여기에 쓴다.
+> 내 티켓은 3개(T-009·T-003·T-022)지만 **T-009가 이 프로젝트에서 가장 무거운 작업**이다. 시간을 여기에 쓴다.
 
 ### T-009 — 거래 상태 머신 (D1~D3 · 이 서비스의 핵심)
 
@@ -143,7 +195,8 @@ public class TransactionService {
 
 ```java
 // ProductRepository (BE-C에게 요청해서 넣는다)
-@Modifying(clearAutomatically = true)
+// ⚠ clearAutomatically = true 를 걸지 않는다 — 걸면 영속성 컨텍스트가 비워져 바로 뒤의 buyer.withdraw()가 DB에 안 들어간다(T-009 9/27 개정 1번).
+@Modifying
 @Query("update Product p set p.status = :next where p.id = :id and p.status = :expected")
 int transition(@Param("id") Long id,
                @Param("expected") ProductStatus expected,
@@ -250,14 +303,14 @@ curl -s localhost:8080/api/products/999999999 | jq
 
 **T-009를 "증명"하는 티켓이다.** 계약 표류를 기계가 잡게 하고, 상태 머신의 경계를 테스트로 닫는다.
 
-**1) 게이트에 검사 3개를 추가한다** — `seams/check-api.mjs`는 BE-A 소유라 **BE-A 옆에서 같이 넣거나 diff로 넘긴다**
+**1) 게이트 검사 3개 — 이미 들어가 있다(9/27 팀장 반영).** 내가 할 일은 실서버에서 13/13이 나오게 T-009 `[9/27 개정]`을 끝내는 것
 
 ```
 - POST /api/products/{id}/purchase       → 201 · data.buyerId·data.sellerId 가 문자열
 - GET  /api/transactions/{id}            → status 가 5종 enum 중 하나 · amountKrw 숫자
 - PATCH /api/transactions/{id}/confirm (PAID 상태 거래에) → 409 INVALID_TRANSACTION_STATUS
 ```
-> 기존 10개 검사의 형태(`check()` · `errs.push`)를 그대로 따른다. **실서버와 목 서버 양쪽에서 13/13**여야 머지.
+> 검사 블록은 `errs.push` + `report.push([...])` 형태다(`check()` 함수는 없다). **실서버와 목 서버 양쪽에서 13/13**여야 머지.
 > 목이 13/13가 안 나오면 목이 계약을 안 따르는 것 — BE-A에게 보고.
 
 **2) 상태 머신 엣지 테스트** — T-009의 8개 위에 얹는다

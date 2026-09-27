@@ -1,6 +1,6 @@
 # T-004 — JWT 발급·검증
 
-**담당:** BE-B · **브랜치:** `be-jwt` · **예상:** D1~D2 · **선행:** T-001
+**담당:** BE-B · **브랜치:** `be-jwt-filter` · **예상:** D1~D2 · **선행:** T-001
 
 ## [배경]
 
@@ -12,7 +12,7 @@
 관리자 화면  세션 + 폼 로그인 (T-005·T-018)
 ```
 
-**토큰 규격 — D1 회의에서 확정할 것** (`SPEC.md` §3.1 OPEN 항목):
+**토큰 규격 — D1 회의에서 확정** (`SPEC.md` §1 확정 사항):
 
 ```
 알고리즘   HS256
@@ -52,5 +52,5 @@ secret     32바이트 이상 (app.jwt.secret · 환경변수로 주입 가능)
 ```bash
 IntelliJ에서 src/test 우클릭 → Run 'All Tests'
 IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
-node seams/check-api.mjs        # 이 시점엔 8/10 (login 관련 2개만 RED)가 정상
+node seams/check-api.mjs        # 이 시점엔 8/13 (login 관련 5개가 RED)가 정상
 ```
