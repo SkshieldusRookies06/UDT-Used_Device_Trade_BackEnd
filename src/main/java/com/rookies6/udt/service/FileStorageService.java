@@ -64,7 +64,7 @@ public class FileStorageService {
     public StoredFile store(MultipartFile file, String subdir) {
         Set<String> allowed = allowedExtensions(subdir);
         if (file == null || file.isEmpty()) {
-            throw new BusinessException(ErrorCode.FILE_TYPE_NOT_ALLOWED);
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR); // 빈 파일 — BE-A.md 5절·T-023 검사 순서 1번
         }
         if (file.getSize() > MAX_BYTES) {
             throw new BusinessException(ErrorCode.FILE_TOO_LARGE);
@@ -104,6 +104,20 @@ public class FileStorageService {
             return new UrlResource(target.toUri());
         } catch (MalformedURLException e) {
             throw new BusinessException(ErrorCode.FILE_STORAGE_ERROR);
+        }
+    }
+
+    /** 저장 실패 롤백용 — 없는 파일이면 조용히 지나간다. DB 롤백은 파일을 되돌리지 못하므로 호출자가 직접 부른다. */
+    public void delete(String subdir, String storedName) {
+        Path directory = root.resolve(subdir);
+        Path target = directory.resolve(storedName).normalize();
+        if (!target.startsWith(directory)) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(target);
+        } catch (IOException ignored) {
+            // 고아 파일 하나가 남는 것이 요청 실패보다 낫다
         }
     }
 
