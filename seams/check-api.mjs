@@ -1,5 +1,6 @@
 // UDT seam 게이트 — 실행: node seams/check-api.mjs [base_url]   (리포 루트에서)
 // 계약 정본: SPEC.md §4. 계약이 바뀌면 이 파일도 같은 커밋에서 바뀐다(SPEC.md §10).
+// 검사 13개 — 10개(상품·인증·/api/me) + 거래 3개(T-022). T-005 전에는 로그인 관련 5개가 RED(8/13)가 정상.
 
 const BASE = process.argv[2] ?? "http://localhost:8080";
 const report = [];
@@ -250,6 +251,105 @@ function checkIsoOffset(v, errs, label) {
     }
   }
   report.push(["로그인 → 토큰 → /api/me", errs]);
+}
+
+// ── 거래 3종 (T-022 · SPEC §4.5·§4.6·§4.9) — 시드 계정으로 로그인해 실제 구매 1건을 만든다 ────
+// ddl-auto: create 라 재기동마다 초기화된다. 같은 서버에서 반복 실행하면 ON_SALE 상품을 하나씩 소비한다.
+{
+  const SEED_EMAIL = process.env.SEED_EMAIL ?? "buyer1@udt.test";
+  const SEED_PW = process.env.SEED_PW ?? "Test1234!";
+  const login = await call("/api/auth/login", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: SEED_EMAIL, password: SEED_PW }),
+  });
+  const token = login.body?.data?.accessToken;
+  const auth = { Authorization: `Bearer ${token}` };
+  const TX_STATUSES = ["PAID", "SHIPPING", "CONFIRMED", "DISPUTED", "REFUNDED"];
+
+  if (!token) {
+    const why = "로그인 실패 — T-005 전까지는 이 RED 3개가 정상";
+    report.push(["POST /api/products/{id}/purchase", [why]]);
+    report.push(["GET /api/transactions/{id}", [why]]);
+    report.push(["PATCH /api/transactions/{id}/confirm (PAID → 409)", [why]]);
+  } else {
+    // 내 상품이 아닌 ON_SALE 상품 하나 고른다
+    const me = (await call("/api/me", { headers: auth })).body?.data ?? {};
+    const list = (await call("/api/products?page=0&size=50")).body?.data?.content ?? [];
+    const target = list.find((p) => p.sellerNickname !== me.nickname);
+    let txId;
+
+    {
+      const errs = [];
+      if (!target) errs.push("구매할 ON_SALE 상품이 없다 — 시드 재실행(재기동)");
+      else {
+        const r = await call(`/api/products/${target.id}/purchase`, { method: "POST", headers: auth });
+        if (r.down) errs.push(`서버 응답 없음: ${r.msg}`);
+        else if (r.status !== 201) errs.push(`상태 ${r.status} (계약: 201) body=${JSON.stringify(r.body)}`);
+        else {
+          const d = envelope(r.body, errs) ?? {};
+          checkFields(d, [["id", "string"], ["productId", "string"], ["productTitle", "string"],
+                          ["buyerId", "string"], ["sellerId", "string"], ["buyerNickname", "string"],
+                          ["sellerNickname", "string"], ["amountKrw", "number"], ["status", "string"],
+                          ["createdAt", "string"]], errs, "transaction");
+          for (const k of ["courier", "trackingNo", "confirmedAt", "dispute"])
+            if (!(k in d)) errs.push(`transaction 키 없음: ${k} (없으면 null로 존재해야 한다)`);
+          if (d.status !== "PAID") errs.push(`구매 직후 status=${d.status} (계약: PAID)`);
+          if (d.buyerId !== me.id) errs.push(`buyerId(${d.buyerId}) ≠ 로그인 사용자(${me.id})`);
+          if (d.amountKrw !== target.priceKrw) errs.push(`amountKrw(${d.amountKrw}) ≠ 상품 가격(${target.priceKrw})`);
+          checkIsoOffset(d.createdAt, errs, "createdAt");
+          txId = d.id;
+          // 잔액이 실제로 빠졌는가 (T-009 개정 1번 회귀)
+          const after = (await call("/api/me", { headers: auth })).body?.data ?? {};
+          if (typeof after.balanceKrw === "number" && after.balanceKrw !== me.balanceKrw - target.priceKrw)
+            errs.push(`구매 후 잔액 ${after.balanceKrw} (기대 ${me.balanceKrw - target.priceKrw}) — 잔액 차감이 DB에 반영되지 않았다 (T-009 개정 1번)`);
+        }
+      }
+      report.push(["POST /api/products/{id}/purchase", errs]);
+    }
+
+    {
+      const errs = [];
+      if (!txId) errs.push("구매가 안 돼서 건너뜀");
+      else {
+        const r = await call(`/api/transactions/${txId}`, { headers: auth });
+        if (r.status !== 200) errs.push(`상태 ${r.status} (계약: 200 · 당사자)`);
+        else {
+          const d = envelope(r.body, errs) ?? {};
+          if (!TX_STATUSES.includes(d.status)) errs.push(`status 값 밖: ${d.status}`);
+          if (typeof d.amountKrw !== "number") errs.push(`amountKrw 타입 ${typeof d.amountKrw}`);
+          if (!("dispute" in d)) errs.push("dispute 키 없음 (계약 §4.9: 객체 또는 null)");
+        }
+        const nf = await call("/api/transactions/999999999", { headers: auth });
+        if (nf.status !== 404) errs.push(`없는 거래 상태 ${nf.status} (계약: 404 TRANSACTION_NOT_FOUND)`);
+        else if (!errorShape(nf.body)) errs.push(`404 바디가 공통 봉투 아님: ${JSON.stringify(nf.body)}`);
+      }
+      report.push(["GET /api/transactions/{id}", errs]);
+    }
+
+    {
+      const errs = [];
+      if (!txId) errs.push("구매가 안 돼서 건너뜀");
+      else {
+        const r = await call(`/api/transactions/${txId}/confirm`, { method: "PATCH", headers: auth });
+        if (r.status === 405) errs.push("405 — confirm이 PATCH로 매핑되지 않았다 (계약 §4.6 · @PatchMapping)");
+        else if (r.status !== 409) errs.push(`PAID 상태 확정 상태 ${r.status} (계약: 409 INVALID_TRANSACTION_STATUS)`);
+        else if (!errorShape(r.body)) errs.push(`409 바디가 공통 봉투 아님: ${JSON.stringify(r.body)}`);
+        else if (r.body.code !== "INVALID_TRANSACTION_STATUS") errs.push(`code ${r.body.code}`);
+        // 송장 검증 — 구매자가 보내면 403이 먼저다. 여기서는 PATCH 매핑과 봉투만 본다
+        const s = await call(`/api/transactions/${txId}/shipping`, {
+          method: "PATCH", headers: { ...auth, "Content-Type": "application/json" },
+          body: JSON.stringify({ courier: "CJ대한통운", trackingNo: "abc" }),
+        });
+        if (s.status === 405) errs.push("405 — shipping이 PATCH로 매핑되지 않았다 (계약 §4.7)");
+        else if (![400, 403].includes(s.status)) errs.push(`shipping 잘못된 송장 상태 ${s.status} (계약: 400 VALIDATION_ERROR · 구매자면 403)`);
+        else if (!errorShape(s.body)) errs.push(`shipping 에러 바디가 공통 봉투 아님: ${JSON.stringify(s.body)}`);
+        // 관리자 강제 처리는 REST로 열지 않는다 (SPEC §2.5·§3.2)
+        const adm = await call(`/api/admin/transactions/${txId}/force-refund`, { method: "POST", headers: auth });
+        if (adm.status !== 404) errs.push(`/api/admin/... 상태 ${adm.status} — 관리자 강제 환불이 REST로 열려 있다 (계약: 관리자 화면이 Service 직접 호출 · 404여야 한다)`);
+      }
+      report.push(["PATCH /api/transactions/{id}/confirm (PAID → 409)", errs]);
+    }
+  }
 }
 
 // ── 출력 ─────────────────────────────────────────────────────────────────

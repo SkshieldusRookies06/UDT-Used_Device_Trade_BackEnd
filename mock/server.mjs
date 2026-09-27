@@ -23,7 +23,7 @@ const txn = (id, status, extra = {}) => ({
   id: String(id), productId: "20", productTitle: "아이맥 24 M1",
   buyerId: "2", sellerId: "5", buyerNickname: "구매자", sellerNickname: "판매왕",
   amountKrw: 1290000, status, courier: null, trackingNo: null,
-  createdAt: now(), confirmedAt: null, ...extra,
+  createdAt: now(), confirmedAt: null, dispute: null, ...extra,
 });
 
 const TXNS = {
@@ -119,7 +119,12 @@ createServer(async (req, res) => {
     if (needAuth()) return;
     if (buyM[1] === "13") return send(400, err(400, "INSUFFICIENT_BALANCE", "잔액이 부족합니다"));
     if (buyM[1] === "16") return send(409, err(409, "PRODUCT_NOT_ON_SALE", "판매 중인 상품이 아닙니다"));
-    return send(201, ok(txn(1, "PAID"), "구매가 완료되었습니다"));
+    // 계약 §4.5: amountKrw = 그 상품 가격 · 구매자 잔액 즉시 차감(에스크로) · 새 거래는 PAID
+    const bought = product(buyM[1]);
+    const newId = String(Object.keys(TXNS).length + 1);
+    TXNS[newId] = txn(newId, "PAID", { productId: bought.id, productTitle: bought.title, amountKrw: bought.priceKrw, sellerNickname: bought.sellerNickname });
+    ME.balanceKrw -= bought.priceKrw;
+    return send(201, ok(TXNS[newId], "구매 요청이 완료되었습니다"));
   }
 
   if (/^\/api\/products\/\d+$/.test(p) && m === "GET") {
@@ -142,11 +147,17 @@ createServer(async (req, res) => {
     if (action === "/shipping" && m === "PATCH") {
       if (t.status !== "PAID") return send(409, err(409, "INVALID_TRANSACTION_STATUS", "현재 거래 상태에서는 처리할 수 없습니다"));
       const b = await json();
-      return send(200, ok({ ...t, status: "SHIPPING", courier: b.courier ?? "CJ대한통운", trackingNo: b.trackingNo ?? "123456789012" }, "송장이 등록되었습니다"));
+      const fields = [];
+      if (!b.courier) fields.push({ name: "courier", message: "택배사를 입력해 주세요" });
+      if (!/^\d{8,20}$/.test(String(b.trackingNo ?? ""))) fields.push({ name: "trackingNo", message: "송장번호는 숫자 8~20자리입니다" });
+      if (fields.length) return send(400, err(400, "VALIDATION_ERROR", "입력값을 확인해 주세요", fields));
+      Object.assign(t, { status: "SHIPPING", courier: b.courier, trackingNo: b.trackingNo });
+      return send(200, ok(t, "배송 정보가 등록되었습니다"));
     }
     if (action === "/confirm" && m === "PATCH") {
       if (t.status !== "SHIPPING") return send(409, err(409, "INVALID_TRANSACTION_STATUS", "현재 거래 상태에서는 처리할 수 없습니다"));
-      return send(200, ok({ ...t, status: "CONFIRMED", confirmedAt: now() }, "구매가 확정되었습니다"));
+      Object.assign(t, { status: "CONFIRMED", confirmedAt: now() });
+      return send(200, ok(t, "구매가 확정되었습니다"));
     }
     if (action === "/disputes" && m === "POST") {
       if (!["PAID", "SHIPPING"].includes(t.status)) return send(409, err(409, "INVALID_TRANSACTION_STATUS", "현재 거래 상태에서는 처리할 수 없습니다"));
@@ -166,7 +177,7 @@ createServer(async (req, res) => {
   if (p === "/api/auth/signup" && m === "POST") {
     const { email } = await json();
     if (email === "buyer1@udt.test") return send(409, err(409, "EMAIL_ALREADY_EXISTS", "이미 가입된 이메일입니다"));
-    return send(201, ok({ id: "9", email: email ?? "new@udt.test", nickname: "신규회원", role: "MEMBER", balanceKrw: 0 }, "회원가입이 완료되었습니다"));
+    return send(201, ok({ id: "9", email: email ?? "new@udt.test", nickname: "신규회원" }, "회원가입이 완료되었습니다")); // 계약 §4.9: {id,email,nickname}
   }
 
   if (p === "/api/me" || p.startsWith("/api/me/")) {
@@ -176,7 +187,7 @@ createServer(async (req, res) => {
     if (p === "/api/me/wishes") return send(200, ok(pageOf([product(12)]), "조회 완료"));
     if (p === "/api/me/transactions") {
       const role = url.searchParams.get("role");
-      if (role && !["buyer", "seller"].includes(role))
+      if (!["buyer", "seller"].includes(role)) // 누락도 400 (T-021 수용 기준)
         return send(400, err(400, "VALIDATION_ERROR", "입력값을 확인해 주세요"));
       return send(200, ok(pageOf([TXNS[1], TXNS[2], TXNS[3], TXNS[4]]), "조회 완료"));
     }
