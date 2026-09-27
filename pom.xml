@@ -80,6 +80,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <!-- Boot 4: @AutoConfigureMockMvc·@WebMvcTest는 이 스타터에 있다(org.springframework.boot.webmvc.test.autoconfigure) -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
