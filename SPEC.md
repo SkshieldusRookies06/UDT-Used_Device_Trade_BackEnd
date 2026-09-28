@@ -388,7 +388,9 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 - 인증: **구매자 본인만** · 전제 상태 `PAID` 또는 `SHIPPING`
 - 파트 `dispute`(JSON: `{"reason":"..."}` 10~500자) + `files`(0~3장 · jpg/png/pdf · 각 5MB)
 - 성공 201 · `data` = `{"id":"3","transactionId":"7","status":"OPEN","reason":"...","files":[{"id":"9","originalName":"대화캡처.png"}],"createdAt":"..."}`
-- 에러: 409 `DISPUTE_ALREADY_EXISTS` · 409 `INVALID_TRANSACTION_STATUS` · 403 · 400
+- 에러: 409 `DISPUTE_ALREADY_EXISTS` · 409 `INVALID_TRANSACTION_STATUS` · 403 `TRANSACTION_FORBIDDEN`(구매자 아님) ·
+  400 `VALIDATION_ERROR`(+`fields[]` · 사유 10~500자) · 400 `FILE_COUNT_EXCEEDED`(4장 이상) ·
+  400 `FILE_TYPE_NOT_ALLOWED` · 400 `FILE_TOO_LARGE` · 401
 
 ### 4.9 나머지 엔드포인트 (얇은 계약)
 
