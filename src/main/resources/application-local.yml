@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:${DB_PORT:3307}/udt}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:${DB_PORT:3307}/udt?connectionTimeZone=+09:00&forceConnectionTimeZoneToSession=true}
     username: ${SPRING_DATASOURCE_USERNAME:udt}
     password: ${SPRING_DATASOURCE_PASSWORD:udt}
     driver-class-name: org.mariadb.jdbc.Driver
@@ -11,6 +11,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: +09:00
   sql:
     init:
       mode: always

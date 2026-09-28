@@ -2,6 +2,7 @@ package com.rookies6.udt.controller;
 
 import com.rookies6.udt.common.ApiResponse;
 import com.rookies6.udt.dto.WishResponse;
+import com.rookies6.udt.security.CurrentUser;
 import com.rookies6.udt.service.WishService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,8 +19,7 @@ public class WishController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<WishResponse> add(@PathVariable Long id) {
 
-        // TODO -> T-005 이후 진행 가능
-        Long userId = null;
+        Long userId = CurrentUser.id();
 
         WishResponse response = wishService.addWish(userId, id);
 
@@ -29,8 +29,7 @@ public class WishController {
     @DeleteMapping
     public ApiResponse<WishResponse> remove(@PathVariable Long id) {
 
-        // TODO -> T-005 이후 진행 가능
-        Long userId = null;
+        Long userId = CurrentUser.id();
 
         WishResponse response = wishService.removeWish(userId, id);
 

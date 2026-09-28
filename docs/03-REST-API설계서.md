@@ -278,7 +278,7 @@ POST /api/auth/login
 파트: `product`(JSON) + `images`(파일 0~5개)
 제약: jpg/png/webp · 각 5MB · 최대 5장 — **서버가 검증한다**
 성공 **201**: 상세와 동일한 객체. `status`는 항상 `INSPECTING`
-에러: 400 `VALIDATION_ERROR`(+`fields`) · 400 `FILE_TYPE_NOT_ALLOWED` · 400 `FILE_TOO_LARGE` · 401
+에러: 400 `VALIDATION_ERROR`(+`fields`) · 400 `FILE_TYPE_NOT_ALLOWED` · 400 `FILE_TOO_LARGE` · 400 `FILE_COUNT_EXCEEDED`(6장 이상) · 401
 
 > 등록 직후 목록에 보이지 않는 것이 정상이다(검수 대기). 화면에 안내 문구를 띄운다.
 
