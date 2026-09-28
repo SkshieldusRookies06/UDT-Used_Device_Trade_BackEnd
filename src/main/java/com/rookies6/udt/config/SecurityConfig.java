@@ -19,13 +19,18 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import com.rookies6.udt.security.JwtAuthenticationFilter;
+import com.rookies6.udt.security.JwtTokenProvider;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain apiFilterChain(HttpSecurity http, CorsConfigurationSource corsSource)
+    public SecurityFilterChain apiFilterChain(HttpSecurity http, CorsConfigurationSource corsSource,
+                                              JwtTokenProvider jwtTokenProvider)
             throws Exception {
         http
                 .securityMatcher("/api/**")
@@ -43,7 +48,9 @@ public class SecurityConfig {
                                 "/api/products/*",
                                 "/api/products/*/images/*").permitAll()
                         .anyRequest().authenticated())
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(jsonAuthenticationEntryPoint()));
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(jsonAuthenticationEntryPoint()))
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                        UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
