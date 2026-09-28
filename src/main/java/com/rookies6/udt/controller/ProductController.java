@@ -46,7 +46,7 @@ public class ProductController {
     @GetMapping("/{id}")
     public ApiResponse<ProductDetailResponse> detail(@PathVariable Long id) {
 
-        ProductDetailResponse detailResponse = productService.getDetail(id);
+        ProductDetailResponse detailResponse = productService.getDetail(id, CurrentUser.idOrNull().orElse(null));
         return ApiResponse.of(detailResponse, "상품 상세 조회가 완료되었습니다");
     }
 

@@ -47,14 +47,14 @@ public class ProductService {
         return PageResponse.from(result);
     }
 
-    public ProductDetailResponse getDetail(Long id) {
+    public ProductDetailResponse getDetail(Long id, Long viewerId) {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(
                         () -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND)
                 );
 
-        return toDetailResponse(product);
+        return toDetailResponse(product, viewerId);
     }
 
     @Transactional
@@ -103,11 +103,11 @@ public class ProductService {
             throw e;
         }
 
-        return toDetailResponse(product);
+        return toDetailResponse(product, sellerId);
     }
 
 
-    private ProductDetailResponse toDetailResponse(Product product) {
+    private ProductDetailResponse toDetailResponse(Product product, Long viewerId) {
 
         String baseUrl = "/api/products/" + product.getId() + "/images/";
 
@@ -118,6 +118,10 @@ public class ProductService {
                                 baseUrl + image.getId(),
                                 image.getSortOrder()
                         )).toList();
+
+        boolean wished = viewerId != null
+                &&
+                wishRepository.existsByUserIdAndProductId(viewerId, product.getId());
 
         return new ProductDetailResponse(
                 String.valueOf(product.getId()),
@@ -130,7 +134,7 @@ public class ProductService {
                 String.valueOf(product.getSeller().getId()),
                 product.getSeller().getNickname(),
                 images,
-                false,
+                wished,
                 wishRepository.countByProductId(product.getId()),
                 product.getCreatedAt(),
                 product.getUpdatedAt()
