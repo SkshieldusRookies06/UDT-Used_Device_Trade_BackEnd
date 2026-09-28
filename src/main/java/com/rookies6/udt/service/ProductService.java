@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +45,26 @@ public class ProductService {
                 ProductStatus.ON_SALE,
                 normalizedQ, categoryId, pageable);
 
-        Page<ProductSummaryResponse> result = pages.map(this::toSummaryResponse);
+        Map<Long, Integer> wishCounts = getWishCounts(pages.getContent());
+
+        Page<ProductSummaryResponse> result = pages.map(
+                product -> toSummaryResponse(product, wishCounts.getOrDefault(product.getId(), 0))
+        );
         return PageResponse.from(result);
+    }
+
+    private Map<Long, Integer> getWishCounts(List<Product> products) {
+        if (products.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> productIds = products.stream().map(Product::getId).toList();
+
+        return wishRepository.findWishCountsByProductIds(productIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Long) row[1]).intValue()
+                ));
     }
 
     public ProductDetailResponse getDetail(Long id, Long viewerId) {
@@ -141,7 +161,7 @@ public class ProductService {
         );
     }
 
-    private ProductSummaryResponse toSummaryResponse(Product product) {
+    private ProductSummaryResponse toSummaryResponse(Product product, int wishCount) {
 
         String thumbnailUrl = product.getImages().isEmpty()
                 ? null
@@ -157,7 +177,7 @@ public class ProductService {
                 product.getCategory().getName(),
                 product.getSeller().getNickname(),
                 thumbnailUrl,
-                wishRepository.countByProductId(product.getId()),
+                wishCount,
                 product.getCreatedAt()
         );
     }

@@ -18,7 +18,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                     "WHERE p.status = :status " +
                     "AND (:q IS NULL OR LOWER(p.title) LIKE CONCAT('%', :q, '%')) " +
                     "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
-                    "ORDER BY p.createdAt DESC",
+                    "ORDER BY p.createdAt DESC, p.id DESC",
 
             countQuery = "SELECT COUNT(p) FROM Product p " +
                     "WHERE p.status = :status " +

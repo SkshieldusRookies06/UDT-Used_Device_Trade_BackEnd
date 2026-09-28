@@ -424,6 +424,8 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `ACCESS_DENIED` | 403 | 접근 권한이 없습니다 |
 | `INTERNAL_SERVER_ERROR` | 500 | 서버 오류가 발생했습니다 |
 | `RESOURCE_NOT_FOUND` | 404 | 요청한 경로를 찾을 수 없습니다 (매핑 없는 URL — 상품 없음과 구분) |
+| `METHOD_NOT_ALLOWED` | 405 | 허용되지 않는 요청 방식입니다 (계약 밖 · 통합 디버깅용 — 500으로 감싸지 않는다) |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | 지원하지 않는 요청 형식입니다 (multipart 엔드포인트에 JSON 등) |
 | `USER_NOT_FOUND` | 404 | 회원을 찾을 수 없습니다 |
 | `EMAIL_ALREADY_EXISTS` | 409 | 이미 가입된 이메일입니다 |
 | `PRODUCT_NOT_FOUND` | 404 | 상품을 찾을 수 없습니다 |
