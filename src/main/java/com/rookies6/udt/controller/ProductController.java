@@ -8,6 +8,7 @@ import com.rookies6.udt.dto.ProductCreateRequest;
 import com.rookies6.udt.dto.ProductDetailResponse;
 import com.rookies6.udt.dto.ProductSummaryResponse;
 
+import com.rookies6.udt.security.CurrentUser;
 import com.rookies6.udt.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -56,8 +57,7 @@ public class ProductController {
             @RequestPart(value = "images", required = false) List<MultipartFile> images
             ) {
 
-        // TODO(T-005) — 로그인 사용자 id 추출
-        Long sellerId = null;
+        Long sellerId = CurrentUser.id();
 
         ProductDetailResponse response = productService.create(sellerId, request, images);
         return ApiResponse.of(response, "상품 등록이 완료되었습니다");
