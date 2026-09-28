@@ -60,7 +60,7 @@ public class ProductService {
 
         List<Long> productIds = products.stream().map(Product::getId).toList();
 
-        return wishRepository.findWishCountsByProductsIds(productIds).stream()
+        return wishRepository.findWishCountsByProductIds(productIds).stream()
                 .collect(Collectors.toMap(
                         row -> (Long) row[0],
                         row -> ((Long) row[1]).intValue()

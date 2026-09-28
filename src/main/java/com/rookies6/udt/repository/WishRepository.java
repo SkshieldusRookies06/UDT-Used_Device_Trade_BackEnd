@@ -18,5 +18,5 @@ public interface WishRepository extends JpaRepository<Wish, Long> {
             "where w.product.id in :productIds " +
             "group by w.product.id"
     )
-    List<Object[]> findWishCountsByProductsIds(@Param("productIds") List<Long> productIds);
+    List<Object[]> findWishCountsByProductIds(@Param("productIds") List<Long> productIds);
 }
