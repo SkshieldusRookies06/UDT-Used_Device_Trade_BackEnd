@@ -33,7 +33,7 @@ public class AdminDisputeController {
         try {
             transactionService.forceRefund(transactionId); // BR-07
         } catch (BusinessException e) {
-            log.warn("강제 환불 실패 - transactionId={}, code={}", transactionId, e.getErrorCode().getCode());
+            log.warn("강제 환불 실패 - transactionId={}, code={}", transactionId, e.getErrorCode().name());
             redirectAttributes.addFlashAttribute("disputeError", e.getErrorCode().getMessage());
         }
         return "redirect:/admin/disputes";
@@ -45,7 +45,7 @@ public class AdminDisputeController {
         try {
             transactionService.forceConfirm(transactionId); // BR-08
         } catch (BusinessException e) {
-            log.warn("강제 구매확정 실패 - transactionId={}, code={}", transactionId, e.getErrorCode().getCode());
+            log.warn("강제 구매확정 실패 - transactionId={}, code={}", transactionId, e.getErrorCode().name());
             redirectAttributes.addFlashAttribute("disputeError", e.getErrorCode().getMessage());
         }
         return "redirect:/admin/disputes";

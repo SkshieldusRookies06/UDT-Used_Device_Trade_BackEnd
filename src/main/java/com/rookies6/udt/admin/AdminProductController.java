@@ -34,7 +34,7 @@ public class AdminProductController {
         try {
             transactionService.approveInspection(id); // BR-01
         } catch (BusinessException e) {
-            log.warn("상품 승인 실패 - productId={}, code={}", id, e.getErrorCode().getCode());
+            log.warn("상품 승인 실패 - productId={}, code={}", id, e.getErrorCode().name());
             redirectAttributes.addFlashAttribute("approveError", e.getErrorCode().getMessage());
         }
         return "redirect:/admin/products";
@@ -54,7 +54,7 @@ public class AdminProductController {
         try {
             transactionService.rejectInspection(id, reason); // BR-02
         } catch (BusinessException e) {
-            log.warn("상품 반려 실패 - productId={}, code={}", id, e.getErrorCode().getCode());
+            log.warn("상품 반려 실패 - productId={}, code={}", id, e.getErrorCode().name());
             model.addAttribute("rejectError", e.getErrorCode().getMessage());
             model.addAttribute("products", productService.findInspectingProducts());
             return "admin/products";
