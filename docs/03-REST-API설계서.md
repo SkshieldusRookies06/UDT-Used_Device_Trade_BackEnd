@@ -344,7 +344,8 @@ POST /api/auth/login
 파트: `dispute`(JSON `{ "reason": "..." }` 10~500자) + `files`(0~3개 · jpg/png/pdf · 각 5MB)
 전제 상태: `PAID` 또는 `SHIPPING`
 성공 **201**: `{ "id", "transactionId", "status", "reason", "files":[{"id","originalName"}], "createdAt" }`
-에러: 409 `DISPUTE_ALREADY_EXISTS` · 409 `INVALID_TRANSACTION_STATUS` · 403 · 400
+에러: 409 `DISPUTE_ALREADY_EXISTS` · 409 `INVALID_TRANSACTION_STATUS` · 403 `TRANSACTION_FORBIDDEN` ·
+400 `VALIDATION_ERROR`(+`fields`) · 400 `FILE_COUNT_EXCEEDED` · 400 `FILE_TYPE_NOT_ALLOWED` · 400 `FILE_TOO_LARGE` · 401
 
 **GET /api/disputes/{id}/files/{fileId}** · **GET /admin/disputes/{id}/files/{fileId}**
 
