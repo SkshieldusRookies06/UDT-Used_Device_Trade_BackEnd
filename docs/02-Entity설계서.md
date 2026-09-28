@@ -2,13 +2,13 @@
 
 ## 문서 정보
 
-| 항목 | 내용 |
-|---|---|
+| 항목 | 내용                      |
+|---|-------------------------|
 | 프로젝트명 | UDT (Used Device Trade) |
-| 문서 버전 | v0.1 |
-| 작성일 | 2026-09-21 |
-| 작성자 | (이름) |
-| 최종 수정일 | 2026-09-21 |
+| 문서 버전 | v0.2                    |
+| 작성일 | 2026-09-28              |
+| 작성자 | 원종현                     |
+| 최종 수정일 | 2026-09-21              |
 
 > 정본: `src/main/java/com/rookies6/udt/entity/` · `application-local.yml` · `data.sql`
 > 이 문서는 **코드에서 발췌**한다. D2 엔티티 확정 후 작성하고, D8에 재발췌한다.
@@ -269,19 +269,30 @@ public abstract class BaseEntity {
 
 **대상: `GET /api/products` (상품 목록)**
 
-목록 12건을 조회하면 각 상품의 판매자·카테고리를 읽느라 추가 쿼리가 발생한다.
+목록 12건을 조회하면 각 상품의 판매자·카테고리·이미지·찜 수를 읽느라 추가 쿼리가 발생한다.
 
-| 구분 | 방식 |
-|---|---|
-| to-one (seller · category) | `fetch join` 또는 `@EntityGraph` |
+| 구분 | 방식                          |
+|---|-----------------------------|
+| to-one (seller · category) | `fetch join` (`JOIN FETCH`) |
 | 컬렉션 (images) | `hibernate.default_batch_fetch_size: 100` |
+ | 찜 수 (wishCount) | 상품 id 목록으로 `group by` 집계 쿼리 1회 (상품마다 `count` 조회 제거) |
 
 > **컬렉션에 `fetch join` + 페이징을 같이 쓰지 않는다.** 하이버네이트가 페이징을 메모리에서
 > 처리해(`HHH90003004`) 전체 행을 다 읽어 온다.
 
 `[D7] 개선 전 쿼리 로그 캡처 — 첨부`
 `[D7] 개선 후 쿼리 로그 캡처 — 첨부`
-`[D7] 쿼리 수: 개선 전 N건 → 개선 후 N건`
+
+`GET /api/products?page=0&size=12` 1회 호출 시 발생한 쿼리 수 (같은 조건에서 단계별 측정)
+
+| 단계 | 쿼리 수 | 변화 | 캡처 |
+|---|---|---|---|
+| 개선 전 | 32 | 판매자·카테고리·이미지·찜 수를 상품마다 조회 | ![개선 전](images/n1-before.png) |
+| fetch join 적용 | 26 | 판매자·카테고리 조회 제거 (−6) | ![fetch join](images/n1-join-fetch.png) |
+| + batch fetch | 15 | 이미지 조회 12회 → 1회 (−11) | ![batch fetch](images/n1-batch-size.png) |
+| + 찜 수 집계 | 4 | 찜 수 조회 12회 → 1회 (−11) | ![개선 후](images/n1-after.png) |
+
+`[D7] 쿼리 수: 개선 전 32건 → 개선 후 4건`
 
 ### 8.2 쿼리 최적화
 
@@ -444,7 +455,9 @@ public abstract class BaseEntity {
 spring:
   jpa:
     open-in-view: false
-    # default_batch_fetch_size 는 T-019(N+1 튜닝)에서 넣는다 — 미리 넣으면 '개선 전' 로그를 못 찍는다
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
 
 # application-local.yml
 spring:
