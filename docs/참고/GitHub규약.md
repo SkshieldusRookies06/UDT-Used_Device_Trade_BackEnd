@@ -12,12 +12,13 @@
 ## 0. 한 장 요약 (이것만 지켜도 된다)
 
 ```
-아침   두 리포 모두  git checkout main && git pull
-시작   git checkout -b be-<작업명>        (프론트는 fe-<작업명>)   ← main에서 판다
+아침   두 리포 모두  git checkout dev && git pull
+시작   git checkout -b be-<작업명>        (프론트는 fe-<작업명>)   ← dev에서 판다
 작업   티켓에 적힌 [수정 허용 파일]만 건드린다
-끝     게이트 green → git add <파일들> → git commit -m "feat(범위): 한 줄 [T-###]" → git push -u origin be-<작업명>
-PR     GitHub에서 Pull Request → 템플릿 채움 → 오너(BE-A / FE-A)에게 리뷰 요청
-머지   오너만 누른다. 머지되면 브랜치 삭제 · 팀 채널에 "머지: T-### · <해시>" 한 줄
+끝     판정 테스트 green → git add <파일들> → git commit -m "feat(범위): 한 줄 [T-###]"
+머지   git checkout dev && git pull && git merge be-<작업명> && git push   ← PR 없이 내가 머지한다
+공지   팀 채널에 "dev 머지: T-### · <해시>" 한 줄 · 브랜치 삭제
+main   팀장(BE-A)만 올린다
 ```
 
 절대 하지 않는 것 — **`main`에 직접 push** · **`--force`** · **`rebase`** · **`.env`·`uploads/`·`seed-images/` 커밋** · **남의 파일 수정**.
@@ -38,19 +39,26 @@ PR     GitHub에서 Pull Request → 템플릿 채움 → 오너(BE-A / FE-A)에
 ## 2. 브랜치
 
 ```
-main                       정본. 항상 기동·빌드·게이트 green 상태를 유지한다
- ├── be-<작업명>            백엔드 작업 브랜치   예) be-product-list · be-jwt-filter
- ├── fe-<작업명>            프론트 작업 브랜치   예) fe-login-page · fe-mypage-tabs
- └── docs-<문서명>          문서만 고치는 브랜치 예) docs-api-design
+main                       정본. 시연·발표가 여기서 돈다. dev에서만 올라온다
+ └── dev                     통합 브랜치. 모든 작업 브랜치가 여기로 머지된다
+      ├── be-<작업명>        백엔드 작업 브랜치   예) be-product-list · be-jwt-filter
+      ├── fe-<작업명>        프론트 작업 브랜치   예) fe-login-page · fe-mypage-tabs
+      └── docs-<문서명>      문서만 고치는 브랜치 예) docs-api-design
 ```
 
 규칙
 
-1. **항상 최신 `main`에서 판다.** `git checkout main && git pull` 먼저.
+1. **항상 최신 `dev`에서 판다.** `git checkout dev && git pull` 먼저.
 2. **브랜치 하나 = 티켓 하나.** 티켓이 크면 브랜치를 쪼개지 말고 **티켓을 쪼갠다**(오너에게 요청).
 3. 작업명은 **영문 소문자·하이픈**만. 한글·공백·대문자·슬래시 없음.
 4. 머지된 브랜치는 지운다(GitHub의 "Delete branch" 버튼). 로컬은 `git branch -d be-<작업명>`.
-5. `main`은 GitHub 설정에서 **보호**한다(팀장이 D1에 설정 · §8).
+5. **`dev`에는 PR 없이 자기가 머지한다.** 대신 CI(§8)가 dev push마다 컴파일·판정 테스트를 돌린다.
+6. **`dev` → `main`은 팀장(BE-A)만.** 하루 끝에 게이트 green일 때 올린다 —
+   D4·D8 통합일과 D9 기능 동결에는 반드시 한 번. 남들은 `main`을 건드리지 않는다.
+7. **공용 파일은 소유자만 고치고, 고쳤으면 팀 채널에 한 줄 공지한다** — `SPEC.md`·`seams/`·`mock/`·
+   `data.sql`·`application*.yml`·`pom.xml`·`common/`·`config/`(전부 BE-A) · `SecurityConfig`(BE-B).
+   `application*.yml`은 BE-B가 `app.jwt.*`, BE-C가 `hibernate.default_batch_fetch_size` 한 줄만 **선공지 후** 추가한다.
+   시드(`data.sql`)나 yml이 바뀌면 **전원이 서버를 재기동**해야 하므로 공지가 곧 안전장치다.
 
 ## 3. 커밋 메시지
 
@@ -81,18 +89,26 @@ test(transaction): BR-03 이중 확정 409 검증 [T-022]
 - `git add -A` 대신 **파일을 지정해서 add**한다. 실수로 `.env`·`uploads/`가 들어가는 사고의 90%가 `-A`에서 난다.
 - **커밋·push는 사람이 한다.** 에이전트에게 시키지 않는다(`CLAUDE.md` 금지 항목).
 
-## 4. Pull Request
+## 4. 머지 (PR은 선택)
 
-PR 없이 `main`에 들어가는 코드는 없다. 팀장 본인도 PR을 연다.
+`dev`는 **PR 없이 각자 머지한다.** 검사는 사람이 아니라 CI와 판정 테스트가 한다(§8).
+`main`은 `dev`에서만, 팀장이 올린다.
 
-### 4.1 여는 법
+### 4.1 머지하는 법
 
-1. push 하면 GitHub가 "Compare & pull request" 버튼을 띄운다. 누른다.
-2. **base는 `main`**, compare는 내 브랜치인지 확인.
-3. 제목은 커밋 메시지와 같은 형식: `feat(product): 상품 목록 검색·페이징 API [T-006]`
-4. 본문은 **템플릿이 자동으로 채워진다**(`.github/PULL_REQUEST_TEMPLATE.md`). 칸을 지우지 말고 채운다.
-5. Reviewers에 오너(백엔드 BE-A · 프론트 FE-A)를 지정한다. **T-009(상태 머신)는 BE-A 리뷰가 머지 조건**이다.
-6. 팀 채널에 PR 링크 한 줄.
+```
+node seams/check-api.mjs   또는  IntelliJ에서 내 판정 테스트 green 확인
+git checkout dev && git pull
+git merge be-<작업명>       ← 충돌 나면 §5
+git push
+git branch -d be-<작업명>
+```
+
+그리고 **팀 채널에 한 줄**: `dev 머지: T-006 · 8f3a21c · 상품 목록 API`.
+
+**PR을 여는 경우는 둘뿐이다** — ① 내가 봐 달라고 요청하고 싶을 때(리뷰는 선택),
+② **T-009(상태 머신)** — 동시성·잔액이 걸려 있어 BE-A 리뷰가 머지 조건이다(역할분담 §2).
+PR을 열면 템플릿(`.github/PULL_REQUEST_TEMPLATE.md`)을 채운다.
 
 ### 4.2 PR 본문에 반드시 들어가는 것
 
@@ -106,16 +122,16 @@ PR 없이 `main`에 들어가는 코드는 없다. 팀장 본인도 PR을 연다
 
 ### 4.3 크기
 
-**diff 한 화면(≈100줄) 이하.** `git diff --stat main` 으로 미리 확인한다. 넘으면 열지 말고 오너에게 티켓 분할을 요청한다.
+**diff 한 화면(≈100줄) 이하.** `git diff --stat dev` 으로 미리 확인한다. 넘으면 열지 말고 오너에게 티켓 분할을 요청한다.
 예외는 오너가 사전에 인정한 경우뿐(예: T-002 엔티티 일괄, T-018 Thymeleaf 템플릿).
 
-## 5. 리뷰·머지 (오너용)
+## 5. 자기 점검 · 오너 사후 확인
 
-머지 버튼은 **오너만** 누른다. 머지 방식은 **"Squash and merge"** 하나로 통일한다 —
-`main` 로그가 티켓 단위로 남고, 초보의 "wip", "fix" 커밋이 정본 히스토리를 더럽히지 않는다.
-squash 커밋 메시지는 PR 제목을 그대로 쓴다(`[T-###]` 포함 여부 확인).
+`dev` 머지는 각자 한다. 대신 **머지 전에 아래 네 줄을 스스로 본다** — PR이 없으니 이게 리뷰를 대신한다.
+팀장은 하루 끝에 `git log --stat origin/dev` 한 번으로 사후 확인한다(5분).
+`dev` → `main`은 **"Squash and merge"** 로 티켓 단위 로그를 남긴다.
 
-### 5.1 거절 기준 — [`역할분담.md` §3.1](역할분담.md) 그대로
+### 5.1 머지 전 자기 점검 — [`역할분담.md` §3.1](역할분담.md) 그대로
 
 | 반려 | 판정 |
 |---|---|
@@ -124,27 +140,28 @@ squash 커밋 메시지는 PR 제목을 그대로 쓴다(`[T-###]` 포함 여부
 | 게이트 red / 빌드 실패 | 본문에 붙인 출력 · 필요하면 오너가 직접 브랜치 받아서 재실행 |
 | 전면 재작성 | diff에서 `-`가 `+`만큼 많다 |
 
-되돌려 줄 말은 §3.1 표의 문장을 **그대로 복사**한다. 이유를 새로 쓰지 않는다.
+넷 중 하나라도 걸리면 **머지하지 말고 티켓을 쪼개거나 오너에게 요청**한다.
+남이 올린 것에 문제가 보이면 §3.1 표의 문장을 **그대로 복사**해 채널에 남긴다.
 
-### 5.2 리뷰 순서 (오너 · PR 하나 5분)
+### 5.2 팀장의 하루 끝 확인 (5분)
 
 ```
-1) 본문 — 게이트 출력이 붙어 있나 · 체크박스 전부 체크됐나        (없으면 읽지 않고 반려)
-2) Files changed 탭 — 파일 목록이 티켓 [제약] 안인가
-3) diff를 위에서 아래로 한 번 읽는다 — 이해 안 되는 줄엔 코멘트
-4) 계약 변경이면 짝 PR이 열려 있나 · backend 쪽이 먼저인가 (§6)
-5) Squash and merge → Delete branch → 채널에 "머지: T-### · <해시>"
+1) git log --stat origin/dev            — 티켓 [제약] 밖 파일이 들어왔나 · 100줄 넘는 덩어리가 있나
+2) CI 초록인가 (Actions 탭 · dev push마다 돈다)
+3) node seams/check-api.mjs             — 게이트 몇/13
+4) 문제가 있으면 채널에 한 줄 + 해당 티켓 담당에게 후속 커밋 요청
+5) 괜찮으면 dev → main 올린다
 ```
 
 ### 5.3 머지 후 (작성자)
 
 ```
-git checkout main
+git checkout dev
 git pull
 git branch -d be-<작업명>
 ```
 
-**다른 사람도 그날 안에 `main`을 pull** 한다 — 아침 루프의 첫 줄이 이것이다.
+**다른 사람도 그날 안에 `dev`를 pull** 한다 — 아침 루프의 첫 줄이 이것이다.
 
 ## 6. 계약(SPEC) 변경 — 두 리포 짝 맞추기
 
@@ -170,22 +187,24 @@ git branch -d be-<작업명>
 
 ```
 1) 절대 억지로 풀지 않는다. 채널에 "T-0XX 충돌, <파일명>" 한 줄
-2) git fetch origin && git checkout origin/main -- <충돌난 파일>     ← main 것을 그대로 받는다
+2) git fetch origin && git checkout origin/dev -- <충돌난 파일>      ← dev 것을 그대로 받는다
 3) 내가 넣었던 줄만 다시 넣는다 (내 diff는 git stash show -p 나 IDE 로컬 히스토리에 있다)
 4) 게이트 돌려서 green 확인 → 커밋 → push (같은 브랜치 · force 아님)
 ```
 
 - **공용 파일**(`SPEC.md` · `data.sql` · `application.yml` · `package.json` · `pom.xml`)에서 충돌 나면 2번을 무조건 한다.
-- `package-lock.json`은 합치지 않는다. main 것을 받고 `npm install`로 재생성.
+- `package-lock.json`은 합치지 않는다. dev 것을 받고 `npm install`로 재생성.
 - 충돌을 줄이는 방법은 하나 — **작은 PR을 자주, 매일 아침 pull.** 3일 묵힌 브랜치는 반드시 충돌한다.
 
 ## 8. GitHub 리포 설정 (팀장 · D1 · 10분)
 
-Settings → Branches → Add branch protection rule → `main`
+Settings → Branches → Add branch protection rule → **`main`만** 건다 (`dev`는 각자 push 해야 하므로 걸지 않는다)
 
-- [x] Require a pull request before merging (approvals: 1)
+- [x] Require a pull request before merging (approvals: 1) — `dev` → `main` 한 건에만 적용된다
 - [x] Do not allow bypassing the above settings
-- [x] Require status checks to pass → `build` 선택 (`.github/workflows/build.yml` — 백엔드는 컴파일+컨텍스트 기동 테스트, 프론트는 `npm run build`. **첫 PR이 한 번 돌아야 목록에 뜬다**) · 게이트(`check-api`)는 서버가 필요해 CI에 없다 — PR 본문 붙여넣기 유지
+- [x] Require status checks to pass → `build` 선택 (`.github/workflows/build.yml` — 백엔드는 컴파일+컨텍스트 기동+판정 테스트, 프론트는 `npm run build`. **한 번 돌아야 목록에 뜬다**) · 게이트(`check-api`)는 서버가 필요해 CI에 없다 — 하루 끝에 각자 돌린다
+
+> CI는 **`dev` push에도 돈다**(`build.yml`). `dev`에 PR이 없으므로 그게 유일한 자동 검사다 — 빨간 채로 두지 않는다.
 
 Settings → General → Pull Requests
 
@@ -215,9 +234,9 @@ Collaborators: 7명 전원 **Write**. Admin은 팀장만.
 ## 10. 일일 리듬과 git
 
 ```
-아침 (5분)   두 리포 git checkout main && git pull → 로드맵에서 오늘 칸 → 브랜치 판다
+아침 (5분)   두 리포 git checkout dev && git pull → 로드맵에서 오늘 칸 → 브랜치 판다
 낮           티켓 [수정 허용 파일]만 · 커밋은 의도 단위로 여러 번 (push는 끝에 한 번이어도 됨)
-하루 끝 (5분) 게이트 green → git diff --stat main (100줄 이하) → push → PR → 채널 한 줄
+하루 끝 (5분) 판정 테스트 green → git diff --stat dev (100줄 이하) → dev 머지·push → 채널 한 줄
              worklog/<내이름>/D##.md 3줄 (머지 · 열었음 · 막힘)
 ```
 
@@ -230,20 +249,20 @@ Collaborators: 7명 전원 **Write**. Admin은 팀장만.
 | `warning: LF will be replaced by CRLF` | 무해. 한 번만 `git config --global core.autocrlf true` |
 | 한글 파일명이 `\341\204...`로 보인다 | `git config --global core.quotepath false` |
 | 실행 파일 권한(mode 100644 ↔ 100755) diff가 뜬다 | `git config core.fileMode false` |
-| PowerShell에서 `git checkout origin/main -- <파일>`이 안 된다 | 파일 경로를 따옴표로 감싼다: `git checkout origin/main -- "src/main/resources/data.sql"` |
+| PowerShell에서 `git checkout origin/dev -- <파일>`이 안 된다 | 파일 경로를 따옴표로 감싼다: `git checkout origin/dev -- "src/main/resources/data.sql"` |
 | push가 거절된다 (`rejected … fetch first`) | 남이 같은 브랜치에 올렸다. `git pull` 후 다시 push. **`--force` 금지** |
-| `main`에 실수로 커밋했다 | push 전이면 `git branch be-<작업명>` → `git reset --hard origin/main` → `git checkout be-<작업명>`. push 후면 오너에게 말한다 |
+| `dev`·`main`에 실수로 커밋했다 | push 전이면 `git branch be-<작업명>` → `git reset --hard origin/dev` → `git checkout be-<작업명>`. push 후면 오너에게 말한다 |
 
 ## 12. 자주 쓰는 명령 모음
 
 ```bash
 # 시작
-git checkout main && git pull
+git checkout dev && git pull
 git checkout -b be-product-list
 
 # 상태 보기
 git status
-git diff --stat main            # 100줄 넘는지
+git diff --stat dev            # 100줄 넘는지
 git log --oneline -10
 
 # 커밋
@@ -252,7 +271,7 @@ git commit -m "feat(product): 상품 목록 검색·페이징 API [T-006]"
 git push -u origin be-product-list
 
 # 머지 후 정리
-git checkout main && git pull
+git checkout dev && git pull
 git branch -d be-product-list
 
 # 실수 되돌리기 (커밋 전)

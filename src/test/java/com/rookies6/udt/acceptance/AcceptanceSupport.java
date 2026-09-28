@@ -65,6 +65,12 @@ public abstract class AcceptanceSupport {
                 .password("not-a-real-hash").nickname(prefix + "닉").role(Role.MEMBER).balanceKrw(balance).build());
     }
 
+    /** data.sql 시드 계정 — 티켓 수용 기준의 시드 수치를 그대로 검사할 때 쓴다. 읽기만 하므로 롤백으로 원상복구된다. */
+    protected User seedUser(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("시드에 없는 계정: " + email));
+    }
+
     protected Category category() {
         return categoryRepository.saveAndFlush(Category.builder()
                 .name("acc-" + UUID.randomUUID().toString().substring(0, 8)).build());

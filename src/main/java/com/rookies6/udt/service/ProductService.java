@@ -3,10 +3,7 @@ package com.rookies6.udt.service;
 import com.rookies6.udt.common.BusinessException;
 import com.rookies6.udt.common.ErrorCode;
 import com.rookies6.udt.common.PageResponse;
-import com.rookies6.udt.dto.ProductCreateRequest;
-import com.rookies6.udt.dto.ProductDetailResponse;
-import com.rookies6.udt.dto.ProductImageResponse;
-import com.rookies6.udt.dto.ProductSummaryResponse;
+import com.rookies6.udt.dto.*;
 import com.rookies6.udt.entity.*;
 import com.rookies6.udt.repository.CategoryRepository;
 import com.rookies6.udt.repository.ProductRepository;
@@ -20,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -31,6 +29,8 @@ public class ProductService {
     private final WishRepository wishRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+
+    private final FileStorageService fileStorageService;
 
     public PageResponse<ProductSummaryResponse> getProducts(
             String q, Long categoryId, int page, int size) {
@@ -47,36 +47,32 @@ public class ProductService {
         return PageResponse.from(result);
     }
 
-    public ProductDetailResponse getDetail(Long id) {
+    public ProductDetailResponse getDetail(Long id, Long viewerId) {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(
                         () -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND)
                 );
 
-        return toDetailResponse(product);
+        return toDetailResponse(product, viewerId);
     }
 
     @Transactional
     public ProductDetailResponse create(Long sellerId, ProductCreateRequest request, List<MultipartFile> images) {
 
-        if (images != null && images.size() > 5) {
+        List<MultipartFile> files =
+                images == null ? List.of() : images.stream()
+                        .filter(f -> !f.isEmpty()).toList();
+
+        if (files.size() > 5) {
             throw new BusinessException(ErrorCode.FILE_COUNT_EXCEEDED);
         }
 
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Long categoryId;
+        Long categoryId = Long.parseLong(request.categoryId());
 
-
-        try {
-            categoryId = Long.parseLong(request.categoryId());
-        } catch (NumberFormatException e) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
-        }
-
-        // 카테고리 없을 때 예외가 필요한가?
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.VALIDATION_ERROR));
 
@@ -89,15 +85,29 @@ public class ProductService {
                 .conditionGrade(ConditionGrade.valueOf(request.conditionGrade()))
                 .build();
 
-        productRepository.save(product);
+        List<String> storedNames = new ArrayList<>();
 
-        // TODO(T-023) — FileStorageService 나오면 images 순회하며 ProductImage 생성·연결
+        try {
+            int sortOrder = 0;
+            for (MultipartFile file : files) {
+                StoredFile stored = fileStorageService.store(file, FileStorageService.PRODUCTS);
+                storedNames.add(stored.storedName());
+                product.addImage(new ProductImage(stored.storedName(), stored.originalName(), sortOrder++));
+            }
 
-        return toDetailResponse(product);
+            productRepository.save(product);
+
+        } catch (RuntimeException e) {
+            storedNames.forEach(name ->
+                    fileStorageService.delete(FileStorageService.PRODUCTS, name));
+            throw e;
+        }
+
+        return toDetailResponse(product, sellerId);
     }
 
 
-    private ProductDetailResponse toDetailResponse(Product product) {
+    private ProductDetailResponse toDetailResponse(Product product, Long viewerId) {
 
         String baseUrl = "/api/products/" + product.getId() + "/images/";
 
@@ -108,6 +118,10 @@ public class ProductService {
                                 baseUrl + image.getId(),
                                 image.getSortOrder()
                         )).toList();
+
+        boolean wished = viewerId != null
+                &&
+                wishRepository.existsByUserIdAndProductId(viewerId, product.getId());
 
         return new ProductDetailResponse(
                 String.valueOf(product.getId()),
@@ -120,7 +134,7 @@ public class ProductService {
                 String.valueOf(product.getSeller().getId()),
                 product.getSeller().getNickname(),
                 images,
-                false,
+                wished,
                 wishRepository.countByProductId(product.getId()),
                 product.getCreatedAt(),
                 product.getUpdatedAt()
