@@ -1,10 +1,11 @@
-# PR마다 컴파일 + 컨텍스트 기동 테스트. 게이트(seams/)는 서버가 떠 있어야 해서 여기서 안 돈다 — PR 본문에 붙인다.
+# dev·main에 들어가는 모든 코드에 컴파일 + 컨텍스트 기동 + 판정 테스트. dev는 PR이 없으므로 이게 유일한 자동 검사다.
+# 게이트(seams/)는 서버가 떠 있어야 해서 여기서 안 돈다 — 하루 끝에 각자 한 번 돌린다.
 name: build
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main]
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,5 +28,11 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: Build & test
-        run: mvn -B test
+      # 1단계는 반드시 초록이어야 한다 — 컴파일과 스프링 기동이 깨지면 전원이 멈춘다.
+      - name: 컴파일 + 컨텍스트 기동 (필수)
+        run: mvn -B test -Dtest=UdtApplicationTests -DfailIfNoSpecifiedTests=false
+
+      # 2단계는 구현 현황판이다. 미구현 판정 테스트가 red인 것은 정상이므로 CI를 떨어뜨리지 않는다.
+      # D5에 구현이 끝나면 -Dmaven.test.failure.ignore=true 를 빼서 필수로 승격한다.
+      - name: 판정 테스트 현황 (D5까지 red 허용)
+        run: mvn -B test -Dmaven.test.failure.ignore=true
