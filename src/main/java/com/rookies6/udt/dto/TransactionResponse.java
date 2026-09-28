@@ -4,23 +4,29 @@ import com.rookies6.udt.entity.Transaction;
 
 import java.time.OffsetDateTime;
 
-public record TransactionResponse(String id, String productId, String buyerId, String sellerId,
+// SPEC 4.5 Transaction 객체
+public record TransactionResponse(String id, String productId, String productTitle,
+                                  String buyerId, String sellerId,
+                                  String buyerNickname, String sellerNickname,
                                   long amountKrw, String status,
                                   String courier, String trackingNo,
-                                  OffsetDateTime confirmedAt, OffsetDateTime createdAt) {
+                                  OffsetDateTime createdAt, OffsetDateTime confirmedAt) {
 
     public static TransactionResponse from(Transaction tx) {
         return new TransactionResponse(
                 String.valueOf(tx.getId()),
                 String.valueOf(tx.getProduct().getId()),
+                tx.getProduct().getTitle(),
                 String.valueOf(tx.getBuyer().getId()),
                 String.valueOf(tx.getProduct().getSeller().getId()),
+                tx.getBuyer().getNickname(),
+                tx.getProduct().getSeller().getNickname(),
                 tx.getAmountKrw(),
                 tx.getStatus().name(),
                 tx.getCourier(),
                 tx.getTrackingNo(),
-                tx.getConfirmedAt(),
-                tx.getCreatedAt()
+                tx.getCreatedAt(),
+                tx.getConfirmedAt()
         );
     }
 }
