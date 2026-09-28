@@ -379,6 +379,8 @@ POST /api/auth/login
 | `ACCESS_DENIED` | 403 | 접근 권한이 없습니다 |
 | `INTERNAL_SERVER_ERROR` | 500 | 서버 오류가 발생했습니다 |
 | `RESOURCE_NOT_FOUND` | 404 | 요청한 경로를 찾을 수 없습니다 |
+| `METHOD_NOT_ALLOWED` | 405 | 허용되지 않는 요청 방식입니다 | — |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | 지원하지 않는 요청 형식입니다 | — |
 
 ### 5.2 비즈니스 에러 코드
 
