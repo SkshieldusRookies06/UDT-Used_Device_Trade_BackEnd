@@ -122,7 +122,8 @@ PR을 열면 템플릿(`.github/PULL_REQUEST_TEMPLATE.md`)을 채운다.
 
 ### 4.3 크기
 
-**diff 한 화면(≈100줄) 이하.** `git diff --stat dev` 으로 미리 확인한다. 넘으면 열지 말고 오너에게 티켓 분할을 요청한다.
+**본 코드 150줄 이하.** `git diff --stat dev -- src/main` 으로 미리 확인한다 — **테스트·문서·설정은 세지 않는다.**
+넘으면 오너에게 티켓 분할을 요청한다. 쪼갤 수 없는 티켓이었다면 채널에 한 줄로 사유를 남긴다.
 예외는 오너가 사전에 인정한 경우뿐(예: T-002 엔티티 일괄, T-018 Thymeleaf 템플릿).
 
 ## 5. 자기 점검 · 오너 사후 확인
@@ -135,7 +136,7 @@ PR을 열면 템플릿(`.github/PULL_REQUEST_TEMPLATE.md`)을 채운다.
 
 | 반려 | 판정 |
 |---|---|
-| 한 화면(≈100줄) 초과 | `git diff --stat` |
+| 본 코드 150줄 초과 (테스트·문서 제외) | `git diff --stat dev -- src/main` |
 | 수정 허용 밖 파일 | diff 파일 목록 vs 티켓 `[제약]` |
 | 게이트 red / 빌드 실패 | 본문에 붙인 출력 · 필요하면 오너가 직접 브랜치 받아서 재실행 |
 | 전면 재작성 | diff에서 `-`가 `+`만큼 많다 |
@@ -146,7 +147,7 @@ PR을 열면 템플릿(`.github/PULL_REQUEST_TEMPLATE.md`)을 채운다.
 ### 5.2 팀장의 하루 끝 확인 (5분)
 
 ```
-1) git log --stat origin/dev            — 티켓 [제약] 밖 파일이 들어왔나 · 100줄 넘는 덩어리가 있나
+1) git log --stat origin/dev            — 티켓 [제약] 밖 파일이 들어왔나 · src/main 150줄 넘는 덩어리가 있나
 2) CI 초록인가 (Actions 탭 · dev push마다 돈다)
 3) node seams/check-api.mjs             — 게이트 몇/13
 4) 문제가 있으면 채널에 한 줄 + 해당 티켓 담당에게 후속 커밋 요청
@@ -236,7 +237,7 @@ Collaborators: 7명 전원 **Write**. Admin은 팀장만.
 ```
 아침 (5분)   두 리포 git checkout dev && git pull → 로드맵에서 오늘 칸 → 브랜치 판다
 낮           티켓 [수정 허용 파일]만 · 커밋은 의도 단위로 여러 번 (push는 끝에 한 번이어도 됨)
-하루 끝 (5분) 판정 테스트 green → git diff --stat dev (100줄 이하) → dev 머지·push → 채널 한 줄
+하루 끝 (5분) 판정 테스트 green → git diff --stat dev -- src/main (150줄 이하) → dev 머지·push → 채널 한 줄
              worklog/<내이름>/D##.md 3줄 (머지 · 열었음 · 막힘)
 ```
 
@@ -262,7 +263,7 @@ git checkout -b be-product-list
 
 # 상태 보기
 git status
-git diff --stat dev            # 100줄 넘는지
+git diff --stat dev -- src/main   # 150줄 넘는지 (테스트·문서는 안 센다)
 git log --oneline -10
 
 # 커밋
