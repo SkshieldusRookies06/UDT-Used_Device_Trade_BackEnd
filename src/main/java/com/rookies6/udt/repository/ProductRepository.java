@@ -31,7 +31,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("categoryId") Long categoryId,
             Pageable pageable);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query("update Product p set p.status = :next where p.id = :id and p.status = :expected")
     int transition(@Param("id") Long id,
                    @Param("expected") ProductStatus expected,
