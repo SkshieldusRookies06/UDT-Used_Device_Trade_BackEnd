@@ -1,9 +1,5 @@
-// security/JwtTokenProvider.java (수정)
 package com.rookies6.udt.security;
 
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -12,6 +8,7 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -30,12 +27,17 @@ public class JwtTokenProvider {
     }
 
     public String createToken(Long userId, String role) {
+        return createToken(userId, role, null);
+    }
+
+    public String createToken(Long userId, String role, String nickname) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationSeconds * 1000);
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("role", role)
+                .claim("nickname", nickname)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)
