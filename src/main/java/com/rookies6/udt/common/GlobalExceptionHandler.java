@@ -5,6 +5,8 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -55,6 +57,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException e) {
         return ResponseEntity.status(ErrorCode.FILE_TOO_LARGE.getStatus())
                 .body(ErrorResponse.of(ErrorCode.FILE_TOO_LARGE, ErrorCode.FILE_TOO_LARGE.getMessage()));
+    }
+
+    // 계약 밖 요청도 공통 봉투로 돌려준다 — 여기가 없으면 아래 Exception 핸들러가 500으로 감싸 원인이 가려진다
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e,
+                                                                HttpServletRequest req) throws Exception {
+        if (isAdmin(req)) throw e;
+        log.warn("허용되지 않는 메서드 {} {}", req.getMethod(), req.getRequestURI());
+        return ResponseEntity.status(ErrorCode.METHOD_NOT_ALLOWED.getStatus())
+                .body(ErrorResponse.of(ErrorCode.METHOD_NOT_ALLOWED, ErrorCode.METHOD_NOT_ALLOWED.getMessage()));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException e,
+                                                                    HttpServletRequest req) throws Exception {
+        if (isAdmin(req)) throw e;
+        log.warn("지원하지 않는 Content-Type {} {} ({})", req.getMethod(), req.getRequestURI(), req.getContentType());
+        return ResponseEntity.status(ErrorCode.UNSUPPORTED_MEDIA_TYPE.getStatus())
+                .body(ErrorResponse.of(ErrorCode.UNSUPPORTED_MEDIA_TYPE,
+                        ErrorCode.UNSUPPORTED_MEDIA_TYPE.getMessage()));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
