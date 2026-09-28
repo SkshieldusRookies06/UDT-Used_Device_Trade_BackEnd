@@ -71,13 +71,7 @@ public class ProductService {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Long categoryId;
-
-        try {
-            categoryId = Long.parseLong(request.categoryId());
-        } catch (NumberFormatException e) {
-            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
-        }
+        Long categoryId = Long.parseLong(request.categoryId());
 
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.VALIDATION_ERROR));

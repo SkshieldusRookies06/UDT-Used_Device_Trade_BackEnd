@@ -20,7 +20,7 @@ public record ProductCreateRequest(
         String conditionGrade,
 
         @NotBlank(message = "카테고리는 필수입니다")
-        @Pattern(regexp = "\\d+", message = "카테고리 값이 올바르지 않습니다")
+        @Pattern(regexp = "\\d{1,18}", message = "카테고리 값이 올바르지 않습니다")
         String categoryId
 ) {
 }
