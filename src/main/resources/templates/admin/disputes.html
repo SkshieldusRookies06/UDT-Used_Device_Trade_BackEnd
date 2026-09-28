@@ -6,8 +6,8 @@
 <main>
     <h1>분쟁 목록</h1>
 
-    <p th:if="${disputeError}" th:text="${disputeError}" style="color:#c0392b"></p>
-    <p th:if="${adminError}" th:text="${adminError}" style="color:#c0392b"></p>
+    <p class="error" th:if="${disputeError}" th:text="${disputeError}"></p>
+    <p class="error" th:if="${adminError}" th:text="${adminError}"></p>
 
     <table>
         <thead>
