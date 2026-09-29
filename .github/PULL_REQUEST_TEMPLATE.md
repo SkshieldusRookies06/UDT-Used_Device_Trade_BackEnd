@@ -16,7 +16,7 @@ $ node seams/check-api.mjs
 ```
 
 ## 확인
-- [ ] `git diff --stat dev -- src/main` 이 150줄 이하다 (테스트·문서는 세지 않는다 · 넘으면 사유 한 줄)
+- [ ] `git diff --stat main -- src/main` 이 150줄 이하다 (테스트·문서는 세지 않는다 · 넘으면 사유 한 줄)
 - [ ] 티켓 `[제약]`의 수정 허용 파일 밖을 건드리지 않았다
 - [ ] `.env` · `uploads/` · `seed-images/` · 시크릿 값이 diff에 없다
 - [ ] 상태 전이(`TransactionService`)를 건드렸다면 BE-A를 리뷰어로 지정했다

@@ -16,6 +16,9 @@ spring:
   sql:
     init:
       mode: always
+      # data.sql은 UTF-8이다. 지정하지 않으면 JVM 기본 인코딩으로 읽어
+      # 터미널(mvn spring-boot:run)로 띄울 때 시드 한글이 깨진 채 INSERT된다.
+      encoding: UTF-8
 
 logging:
   level:

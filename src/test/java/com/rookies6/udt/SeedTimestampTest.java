@@ -21,6 +21,17 @@ class SeedTimestampTest {
     @Autowired private JdbcTemplate jdbc;
 
     @Test
+    void seed_korean_is_not_mojibake() {
+        // data.sql을 JVM 기본 인코딩으로 읽으면(= spring.sql.init.encoding 미지정) 시드 한글이 깨진 채 들어간다.
+        // IntelliJ는 UTF-8로 띄우지만 터미널(mvn spring-boot:run)은 Windows 기본 인코딩이라 드러나지 않는다.
+        Long found = jdbc.queryForObject(
+                "select count(*) from products where title = ?", Long.class, "맥북 에어 M2 13인치");
+        assertThat(found)
+                .as("시드 한글이 깨졌다 — application-local.yml 의 spring.sql.init.encoding 을 확인하라")
+                .isEqualTo(1L);
+    }
+
+    @Test
     void seed_timestamps_are_close_to_now() {
         OffsetDateTime now = OffsetDateTime.now();
 

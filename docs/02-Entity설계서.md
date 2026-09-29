@@ -280,9 +280,6 @@ public abstract class BaseEntity {
 > **컬렉션에 `fetch join` + 페이징을 같이 쓰지 않는다.** 하이버네이트가 페이징을 메모리에서
 > 처리해(`HHH90003004`) 전체 행을 다 읽어 온다.
 
-`[D7] 개선 전 쿼리 로그 캡처 — 첨부`
-`[D7] 개선 후 쿼리 로그 캡처 — 첨부`
-
 `GET /api/products?page=0&size=12` 1회 호출 시 발생한 쿼리 수 (같은 조건에서 단계별 측정)
 
 | 단계 | 쿼리 수 | 변화 | 캡처 |
@@ -292,7 +289,7 @@ public abstract class BaseEntity {
 | + batch fetch | 15 | 이미지 조회 12회 → 1회 (−11) | ![batch fetch](images/n1-batch-size.png) |
 | + 찜 수 집계 | 4 | 찜 수 조회 12회 → 1회 (−11) | ![개선 후](images/n1-after.png) |
 
-`[D7] 쿼리 수: 개선 전 32건 → 개선 후 4건`
+**쿼리 수: 개선 전 32건 → 개선 후 4건**
 
 ### 8.2 쿼리 최적화
 
@@ -443,7 +440,7 @@ public abstract class BaseEntity {
 ## 10. 테스트 전략
 
 - **계약 검증 스크립트**가 Repository·Service 동작을 API 레벨에서 간접 검증한다
-  (`node seams/check-api.mjs` — 10개 검사).
+  (`node seams/check-api.mjs` — 13개 검사).
 - `[D7] @DataJpaTest — 고유 제약 위반 · 연관관계 매핑 확인 (여유 시)`
 
 ---

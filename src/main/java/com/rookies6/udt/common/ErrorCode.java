@@ -18,6 +18,7 @@ public enum ErrorCode {
 
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품을 찾을 수 없습니다"),
     PRODUCT_NOT_ON_SALE(HttpStatus.CONFLICT, "판매 중인 상품이 아닙니다"),
+    PRODUCT_NOT_INSPECTING(HttpStatus.CONFLICT, "검수 대기 중인 상품이 아닙니다"),
     SELF_PURCHASE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "본인이 등록한 상품은 구매할 수 없습니다"),
     INSUFFICIENT_BALANCE(HttpStatus.BAD_REQUEST, "잔액이 부족합니다"),
 

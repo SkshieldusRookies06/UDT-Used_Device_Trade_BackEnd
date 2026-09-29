@@ -117,14 +117,14 @@
 `security/` 폴더가 **비어 있다.** 여기부터 만든다. `pom.xml`에 `jjwt 0.12.6`은 이미 있다.
 
 **1) 먼저 `config/SecurityConfig.java`를 읽는다** (고치지는 않는다 — T-005에서 한다)
-체인 3개 골격이 `// TODO(T-005)` 표시와 함께 이미 들어 있다. **무엇을 채워야 하는지 먼저 본다.**
+체인 3개 골격이 `// TODO(T-005)` 표시와 함께 이미 들어 있다(완료 후 9/29 표시 제거). **무엇을 채워야 하는지 먼저 본다.**
 
 **2) `JwtTokenProvider` 를 만든다**
 
 ```
 security/JwtTokenProvider.java
   - secret:  application.yml 의 ${JWT_SECRET:...} 을 @Value 로 받는다 (하드코딩 금지)
-  - generateToken(User)  →  subject=userId, claim에 role, 만료 = app.jwt.expiration-seconds
+  - createToken(userId, role, nickname)  →  subject=userId, claim에 role·nickname, 만료 = app.jwt.expiration-seconds
   - validateToken(String) →  boolean (예외를 밖으로 던지지 않는다)
   - getUserId(String)     →  Long
 ```

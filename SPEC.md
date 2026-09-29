@@ -1,6 +1,6 @@
 # UDT — 중고 전자기기 안전거래 플랫폼 · SPEC
 
-**v1.0 확정 · 2026-09-21 작성 · 2026-09-27 개정(전수 검증 반영 · 말미 개정 이력) · 확인: (7명 이름 — D1 회의 후 채운다)**
+**v1.0 확정 · 2026-09-21 작성 · 2026-09-29 개정(문서 정합 · 말미 개정 이력) · 확인: (7명 이름 — D1 회의 후 채운다)**
 
 > **이 파일의 정본은 `UDT-Used_Device_Trade-backend` 리포에만 있다.**
 > 프론트 리포에는 복사하지 않는다 — 복사본은 반드시 낡는다(§12).
@@ -191,6 +191,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | 상황 | HTTP | code |
 |---|---|---|
 | 판매중이 아닌 상품 구매 | 409 | `PRODUCT_NOT_ON_SALE` |
+| 검수대기가 아닌 상품 승인·반려(BR-01·02) | 409 | `PRODUCT_NOT_INSPECTING` |
 | 본인 상품 구매 | 400 | `SELF_PURCHASE_NOT_ALLOWED` |
 | 잔액 부족 | 400 | `INSUFFICIENT_BALANCE` |
 | 이미 찜한 상품 | 409 | `WISH_ALREADY_EXISTS` |
@@ -363,8 +364,10 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 {"id":"7","productId":"12","productTitle":"맥북 에어 M2 13인치",
  "buyerId":"2","sellerId":"5","buyerNickname":"구매자","sellerNickname":"판매왕",
  "amountKrw":850000,"status":"PAID","courier":null,"trackingNo":null,
- "createdAt":"2026-09-22T15:00:00+09:00","confirmedAt":null}
+ "createdAt":"2026-09-22T15:00:00+09:00","confirmedAt":null,"dispute":null}
 ```
+> **`dispute` 키는 항상 있다** — 분쟁이 있는 거래를 상세(`GET /api/transactions/{id}`)로 볼 때만 객체이고, 구매·송장·확정 응답과 목록(`/api/me/transactions`)은 `null`. 키 자체가 빠지면 게이트가 실패한다.
+>
 > **`buyerId`·`sellerId`(문자열)는 화면이 "내가 구매자인가 판매자인가"를 판정하는 유일한 근거다**
 > — SCR-005의 상태별 액션 버튼이 여기에 걸려 있다. 닉네임은 중복될 수 있으므로 판정에 쓰지 않는다.
 - 에러: 409 `PRODUCT_NOT_ON_SALE` · 400 `SELF_PURCHASE_NOT_ALLOWED` · 400 `INSUFFICIENT_BALANCE` · 401 · 404 `PRODUCT_NOT_FOUND`
@@ -406,7 +409,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `GET /api/me/wishes` | 200 | `{content[],page{}}` (4.2 원소와 동일) | 401 |
 | `GET /api/me/products` | 200 | `{content[],page{}}` · 모든 status 포함 | 401 |
 | `GET /api/me/transactions?role=buyer\|seller` | 200 | `{content[],page{}}` (4.5 원소) | 401 · 400(role 값 오류) |
-| `GET /api/transactions/{id}` | 200 | 4.5 원소 + `dispute`(객체 또는 **null**) | 403 · 404 |
+| `GET /api/transactions/{id}` | 200 | 4.5 원소 — `dispute`가 객체(분쟁 있음) 또는 **null** | 403 · 404 |
 | `GET /api/products/{id}/images/{imageId}` | 200 | 이미지 바이트(`Content-Type: image/*`) | 404 |
 | `GET /api/disputes/{id}/files/{fileId}` | 200 | 파일 바이트 + **`Content-Disposition: attachment; filename="..."`** | 403 · 404 |
 
@@ -430,6 +433,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `EMAIL_ALREADY_EXISTS` | 409 | 이미 가입된 이메일입니다 |
 | `PRODUCT_NOT_FOUND` | 404 | 상품을 찾을 수 없습니다 |
 | `PRODUCT_NOT_ON_SALE` | 409 | 판매 중인 상품이 아닙니다 |
+| `PRODUCT_NOT_INSPECTING` | 409 | 검수 대기 중인 상품이 아닙니다 (관리자 화면 전용 · REST 계약 밖) |
 | `SELF_PURCHASE_NOT_ALLOWED` | 400 | 본인이 등록한 상품은 구매할 수 없습니다 |
 | `INSUFFICIENT_BALANCE` | 400 | 잔액이 부족합니다 |
 | `WISH_ALREADY_EXISTS` | 409 | 이미 찜한 상품입니다 |
@@ -517,7 +521,8 @@ MariaDB의 비밀번호 계정은 기본이 `mysql_native_password`라 추가 �
                        401은 AuthenticationEntryPoint에서 JSON 공통 봉투로
                        (기본값은 302 리다이렉트라 axios 인터셉터가 발동하지 않는다)
 @Order(2)  /admin/** → 세션 · formLogin("/admin/login") · CSRF on · 403은 HTML
-           그 외      → permitAll (정적 · /api/health · /api/products GET)
+           그 외      → permitAll (정적 리소스 등)
+※ /api/health · /api/auth/** · GET 상품·카테고리·이미지의 permitAll은 @Order(1) 체인 안에 있다
 ```
 
 - `/api/**` 체인이 **먼저** 매칭되어야 한다. 순서가 바뀌면 REST 요청이 로그인 HTML로
@@ -700,3 +705,5 @@ main에 들어간다.
 | 2026-09-27 | 티켓 | T-009·T-007·T-008·T-005에 `[9/27 개정]` 절 — 코드와 계약의 차이·이유·완료 판정 테스트. 인수 테스트 추가(9/27 기능별로 분리 — 아래 행) | 지시서 대신 **테스트가 완료 판정**. 근거 목록은 `docs/참고/검증-0927.md` |
 | 2026-09-27 | 문서 정합 | 분쟁 증빙 오너 BE-D→BE-A(`03-REST:357`·`BE-B.md`) · 티켓 선행 정정(T-009·T-005·T-010·T-000 표) · `T-004` 브랜치명 · `T-008` D5→D3 · 게이트 개수 10/10→13/13 · `README`·`BE-B.md`·`아키텍처`의 "admin 없음"→`AdminLoginController` 있음 · `BE-D.md` 예시의 `clearAutomatically` 권고 삭제 · README 프론트 리포 실제 링크 | 팀원이 잘못 만들 수 있는 모순들 |
 | 2026-09-27 | 테스트 | 인수 테스트를 티켓 단위(4파일)에서 **기능 단위 19클래스**로 분리 — `acceptance/transaction`(BE-D 11) · `product`(BE-C 5) · `auth`(BE-B 3). 클래스 이름 `[BE-X ①②]` = `onboarding/역할별/BE-X.md` 0절 표 번호. 아직 없는 메서드·클래스는 리플렉션으로 찾아 **구현 전에도 main이 컴파일된다**. 업로드 임시 폴더를 JVM 단위로 바꿈(@TempDir은 클래스마다 지워져 컨텍스트를 공유하는 두 번째 클래스부터 업로드가 깨졌다) | 한 파일에 여러 개정이 섞여 있으면 red 하나가 어느 줄 몫인지 안 보인다. 한 줄 고치고 그 클래스만 돌려 초록을 확인하게 |
+| 2026-09-29 | §4.5 · §4.9 · §7 | Transaction 예시에 `"dispute":null` 추가(항상 존재하는 키) · §7 다이어그램에서 공개 API permitAll 위치를 `@Order(1)` 체인으로 정정 | 코드·게이트·목은 이미 `dispute` 키를 요구하는데 정본 예시에 없었다. 공개 API가 "그 외" 체인에 있다고 읽히면 체인 순서를 잘못 고친다 |
+| 2026-09-29 | §2.6 · §5 | `PRODUCT_NOT_INSPECTING`(409) 추가 — 검수대기가 아닌 상품을 승인·반려할 때. 25 → 26개 | 명세가 없어 `INVALID_TRANSACTION_STATUS`를 임시로 썼고, 관리자 검수 화면에 "현재 거래 상태에서는…"이 떴다. 관리자 화면 전용이라 게이트·목·프론트는 무변경 |

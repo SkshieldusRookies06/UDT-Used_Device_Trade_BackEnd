@@ -10,3 +10,7 @@ spring:
   sql:
     init:
       mode: never
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
