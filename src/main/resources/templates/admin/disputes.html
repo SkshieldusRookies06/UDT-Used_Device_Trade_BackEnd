@@ -4,33 +4,38 @@
 <body>
 <header th:replace="~{fragments/nav :: nav}"></header>
 <main>
-  <h1>분쟁 목록</h1>
-  <table>
-    <thead>
-      <tr><th>거래</th><th>신고자</th><th>사유</th><th>증빙</th><th>처리</th></tr>
-    </thead>
-    <tbody>
-      <tr th:each="d : ${disputes}">
-        <td th:text="${d.transactionId}"></td>
-        <td th:text="${d.reporterNickname}"></td>
-        <td th:text="${d.reason}"></td>
-        <td>
-          <a th:each="f : ${d.files}"
-             th:href="@{/api/disputes/{did}/files/{fid}(did=${d.id}, fid=f.id)}"
-             th:text="${f.originalName}"></a>
-        </td>
-        <td>
-          <form th:action="@{/admin/disputes/{id}/refund(id=${d.id})}" method="post" style="display:inline">
-            <button type="submit">강제 환불</button>
-          </form>
-          <form th:action="@{/admin/disputes/{id}/confirm(id=${d.id})}" method="post" style="display:inline">
-            <button type="submit">강제 확정</button>
-          </form>
-        </td>
-      </tr>
-      <tr th:if="${#lists.isEmpty(disputes)}"><td colspan="5">처리할 분쟁이 없습니다.</td></tr>
-    </tbody>
-  </table>
+    <h1>분쟁 목록</h1>
+
+    <p class="error" th:if="${disputeError}" th:text="${disputeError}"></p>
+    <p class="error" th:if="${adminError}" th:text="${adminError}"></p>
+
+    <table>
+        <thead>
+        <tr><th>거래</th><th>신고일</th><th>사유</th><th>증빙</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="d : ${disputes}">
+            <td th:text="${d.transactionId}"></td>
+            <td th:text="${#temporals.format(d.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+            <td th:text="${d.reason}"></td>
+            <td>
+                <span th:if="${#lists.isEmpty(d.files)}">첨부 없음</span>
+                <a th:each="f : ${d.files}"
+                   th:href="@{/admin/disputes/{did}/files/{fid}(did=${d.id}, fid=${f.id})}"
+                   th:text="${f.originalName}"></a>
+            </td>
+            <td>
+                <form th:action="@{/admin/disputes/{tid}/refund(tid=${d.transactionId})}" method="post" style="display:inline">
+                    <button type="submit">강제 환불</button>
+                </form>
+                <form th:action="@{/admin/disputes/{tid}/confirm(tid=${d.transactionId})}" method="post" style="display:inline">
+                    <button type="submit">강제 확정</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(disputes)}"><td colspan="5">처리할 분쟁이 없습니다.</td></tr>
+        </tbody>
+    </table>
 </main>
 </body>
 </html>

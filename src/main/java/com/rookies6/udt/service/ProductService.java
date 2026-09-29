@@ -34,6 +34,20 @@ public class ProductService {
 
     private final FileStorageService fileStorageService;
 
+    public List<ProductSummaryResponse> findInspectingProducts() {
+
+        List<Product> products = productRepository.findProductsWithOptions(
+                ProductStatus.INSPECTING, null, null, Pageable.unpaged()
+        ).getContent();
+
+        Map<Long, Integer> wishCounts = getWishCounts(products);
+
+        return products.stream()
+                .map(product -> toSummaryResponse(product,
+                        wishCounts.getOrDefault(product.getId(), 0)))
+                .toList();
+    }
+
     public PageResponse<ProductSummaryResponse> getProducts(
             String q, Long categoryId, int page, int size) {
 
