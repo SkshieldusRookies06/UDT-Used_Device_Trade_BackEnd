@@ -31,8 +31,7 @@ public class TransactionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
         if (product.getStatus() != ProductStatus.INSPECTING) {
-            // TODO(BE-A 요청): 상품 전용 에러코드 검토 (지금은 임시 대체)
-            throw new BusinessException(ErrorCode.INVALID_TRANSACTION_STATUS);
+            throw new BusinessException(ErrorCode.PRODUCT_NOT_INSPECTING);
         }
         product.changeStatus(ProductStatus.ON_SALE);
     }
@@ -44,7 +43,7 @@ public class TransactionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
         if (product.getStatus() != ProductStatus.INSPECTING) {
-            throw new BusinessException(ErrorCode.INVALID_TRANSACTION_STATUS);
+            throw new BusinessException(ErrorCode.PRODUCT_NOT_INSPECTING);
         }
         product.reject(reason);
     }
