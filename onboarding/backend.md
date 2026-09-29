@@ -9,7 +9,7 @@
 
 | | Windows | macOS / Linux |
 |---|---|---|
-| 실행 | **IntelliJ ▶** (전원 공통). 터미널로 돌릴 때만 `mvnw.cmd` (앞에 `./` 없음 · 래퍼는 선택) | IntelliJ ▶. 터미널이면 `chmod +x mvnw` 후 `./mvnw` |
+| 실행 | **IntelliJ ▶** (전원 공통). 터미널로 돌릴 때만 `mvnw.cmd` (앞에 `./` 없음 · 래퍼는 선택) | IntelliJ ▶ (래퍼 없음 — 넣은 뒤에만 `chmod +x mvnw` 후 `./mvnw`) |
 | MariaDB 포트 찾기 | `netstat -ano \| findstr LISTENING \| findstr :330` | `lsof -i :3306 -i :3307` |
 | 8080 잡은 프로세스 죽이기 | `netstat -ano \| findstr :8080` → `taskkill /PID <pid> /F` | `lsof -ti :8080 \| xargs kill` |
 | 줄바꿈 | `.gitattributes`가 LF로 고정한다 — 에디터가 CRLF로 바꾸면 diff가 전부 빨개진다 | — |
@@ -84,6 +84,7 @@ Run/Debug Configurations → UdtApplication → Active profiles: local
 | `Access denied for user 'udt'@...` | 계정·권한을 안 만들었다. 0회차 전제 줄 |
 | `Table 'udt.products' doesn't exist` (기동 직후) | 시드가 DDL보다 먼저 돌았다 — `defer-datasource-initialization: true` 확인 (SPEC §0) |
 | 시드가 **에러 없이 안 돈다** | `spring.sql.init.mode`가 기본값(`embedded`)이다. local에서 `always`로 |
+| 시드 **한글이 깨져** 들어간다 (터미널 기동 때만) | `data.sql`을 JVM 기본 인코딩으로 읽었다. `application-local.yml`의 `spring.sql.init.encoding: UTF-8` 확인 — `SeedTimestampTest`가 잡는다 |
 | `Duplicate entry ... for key 'PRIMARY'` (첫 POST에서) | `data.sql`이 id를 명시했다. **id를 지운다** (SPEC §6) |
 | `Schema-validation: missing table` | `prod` 프로파일로 붙었다. 로컬은 `local` |
 | `cannot find symbol ... getTitle()` | Lombok 애노테이션 처리가 IDE에서 꺼져 있다 — Enable annotation processing |
@@ -95,8 +96,8 @@ Run/Debug Configurations → UdtApplication → Active profiles: local
 | `HHH90003004` (firstResult/maxResults 경고) | **컬렉션 fetch join + 페이징**을 같이 썼다. 전 테이블을 메모리로 올린다 — 컬렉션은 batch size로 |
 | `Whitelabel Error Page` (브라우저에) | REST 경로면 `@RestController` 확인 · `/admin` 경로면 템플릿 파일명·`templates/` 경로 확인 |
 | Security 넣자마자 **모든 API가 401** | permitAll 경로와 CORS를 **Security 체인 안에** 명시했는가 (SPEC §7) |
-| `Using generated security password: ...` (기동 로그) | `SecurityFilterChain`은 있지만 `UserDetailsService`가 아직 없다. T-005에서 DB 사용자로 교체하면 이 줄이 사라진다. **그 전까지 `/admin` 로그인은 아이디 `user` + 이 생성 비밀번호**로 된다 |
-| check-api가 **13개 중 8개 ok** (RED 5개 — 로그인 2 + 거래 3) | RED는 `POST /api/auth/login (자격 오류)`와 `로그인 → 토큰 → /api/me` — 둘 다 `AuthController`가 없어서다(T-004·T-005). **8/13면 정상 진행 중**이고, T-005가 끝나면 13/13가 된다 |
+| `Using generated security password: ...` (기동 로그) | `UserDetailsService` 빈이 없다. 지금은 `security/CustomUserDetailsService`가 있어 **나오면 안 된다** — 그 파일이나 `@Service`가 빠졌는지 확인. `/admin` 로그인은 시드 관리자 `admin@udt.test` |
+| check-api가 **13개 중 8개 ok** (RED 5개 — 로그인 2 + 거래 3) | `AuthController`가 없던 T-005 이전 상태다. 로그인 2개가 실패하면 로그인이 필요한 거래 3개도 같이 실패한다. **지금 코드에서는 13/13이 정상** — 8/13이면 main을 pull·merge 했는지 확인 |
 | `required a single bean, but 2 were found: corsConfigurationSource, mvcHandlerMappingIntrospector` | Spring MVC가 만드는 `HandlerMappingIntrospector`도 `CorsConfigurationSource`다. 우리 빈에 `@Primary`가 빠지면 둘 중 못 고른다 | `CorsConfig`의 빈에 `@Primary` (스캐폴드에 이미 있음 — 지웠으면 복구) |
 | `LazyInitializationException: could not initialize proxy` | `open-in-view: false`라 **트랜잭션 밖에서 연관 엔티티를 건드렸다.** 대개 Controller에서 DTO 변환을 했거나, Service 메서드에 `@Transactional`이 없다 | DTO 변환을 Service 안(`@Transactional`)으로 옮긴다. 규약 B1 |
 | 테스트 실행이 컨텍스트 로딩에서 죽는다 | `@SpringBootTest`는 **MariaDB가 떠 있어야** 돈다 | 테스트 전에 DB를 켠다. 순수 로직 테스트는 `@SpringBootTest` 없이 짠다 |

@@ -4,7 +4,7 @@
 
 ## [배경]
 
-`config/SecurityConfig`에 **체인 3개 골격이 이미 있다**(`// TODO(T-005)` 표시).
+`config/SecurityConfig`에 **체인 3개 골격이 이미 있다**(`// TODO(T-005)` 표시 — 완료 후 9/29 제거).
 JWT 필터와 `UserDetailsService`만 연결하면 된다.
 
 ```

@@ -1,7 +1,5 @@
 package com.rookies6.udt.config;
 
-// TODO(T-005) BE-B — 체인 골격만. JWT 필터·UserDetailsService 연결이 남아 있다 (SPEC §7)
-
 import com.rookies6.udt.common.ErrorCode;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.OffsetDateTime;

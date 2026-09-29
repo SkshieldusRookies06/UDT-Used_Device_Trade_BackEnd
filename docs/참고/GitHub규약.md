@@ -12,8 +12,8 @@
 ## 0. 한 장 요약 (이것만 지켜도 된다)
 
 ```
-아침   두 리포 모두  git checkout dev && git pull
-시작   git checkout -b be-<작업명>        (프론트는 fe-<작업명>)   ← dev에서 판다
+아침   두 리포 모두  git checkout main && git pull   (진행 중 브랜치면 그 브랜치에서 git merge main)
+시작   git checkout -b be-<작업명>        (프론트는 fe-<작업명>)   ← main에서 판다
 작업   티켓에 적힌 [수정 허용 파일]만 건드린다
 끝     판정 테스트 green → git add <파일들> → git commit -m "feat(범위): 한 줄 [T-###]"
 머지   git checkout dev && git pull && git merge be-<작업명> && git push   ← PR 없이 내가 머지한다
@@ -48,7 +48,8 @@ main                       정본. 시연·발표가 여기서 돈다. dev에서
 
 규칙
 
-1. **항상 최신 `dev`에서 판다.** `git checkout dev && git pull` 먼저.
+1. **항상 최신 `main`에서 판다.** `git checkout main && git pull` 먼저. 진행 중인 브랜치는 `git merge main`으로 흡수한다
+   (팀장이 검증해 올린 기준 — 인수 테스트·공용 파일 — 이 main에 있다). 머지 대상은 여전히 `dev`다.
 2. **브랜치 하나 = 티켓 하나.** 티켓이 크면 브랜치를 쪼개지 말고 **티켓을 쪼갠다**(오너에게 요청).
 3. 작업명은 **영문 소문자·하이픈**만. 한글·공백·대문자·슬래시 없음.
 4. 머지된 브랜치는 지운다(GitHub의 "Delete branch" 버튼). 로컬은 `git branch -d be-<작업명>`.
@@ -122,7 +123,7 @@ PR을 열면 템플릿(`.github/PULL_REQUEST_TEMPLATE.md`)을 채운다.
 
 ### 4.3 크기
 
-**본 코드 150줄 이하.** `git diff --stat dev -- src/main` 으로 미리 확인한다 — **테스트·문서·설정은 세지 않는다.**
+**본 코드 150줄 이하.** `git diff --stat main -- src/main` 으로 미리 확인한다 — **테스트·문서·설정은 세지 않는다.**
 넘으면 오너에게 티켓 분할을 요청한다. 쪼갤 수 없는 티켓이었다면 채널에 한 줄로 사유를 남긴다.
 예외는 오너가 사전에 인정한 경우뿐(예: T-002 엔티티 일괄, T-018 Thymeleaf 템플릿).
 
@@ -136,7 +137,7 @@ PR을 열면 템플릿(`.github/PULL_REQUEST_TEMPLATE.md`)을 채운다.
 
 | 반려 | 판정 |
 |---|---|
-| 본 코드 150줄 초과 (테스트·문서 제외) | `git diff --stat dev -- src/main` |
+| 본 코드 150줄 초과 (테스트·문서 제외) | `git diff --stat main -- src/main` |
 | 수정 허용 밖 파일 | diff 파일 목록 vs 티켓 `[제약]` |
 | 게이트 red / 빌드 실패 | 본문에 붙인 출력 · 필요하면 오너가 직접 브랜치 받아서 재실행 |
 | 전면 재작성 | diff에서 `-`가 `+`만큼 많다 |
@@ -162,7 +163,7 @@ git pull
 git branch -d be-<작업명>
 ```
 
-**다른 사람도 그날 안에 `dev`를 pull** 한다 — 아침 루프의 첫 줄이 이것이다.
+팀장이 `dev` → `main`을 올리면 **다른 사람은 다음 아침에 `main`을 pull해 자기 브랜치에 merge** 한다 — 아침 루프의 첫 줄이 이것이다.
 
 ## 6. 계약(SPEC) 변경 — 두 리포 짝 맞추기
 
@@ -222,7 +223,7 @@ Collaborators: 7명 전원 **Write**. Admin은 팀장만.
 
 | 절대 커밋하지 않는다 | 이유 |
 |---|---|
-| `.env` · `application-secret.yml` · 실제 JWT 시크릿 · DB 비밀번호 | 시크릿. `.env.example`에 **키 이름만** |
+| `.env` · `application-secret.yml` · 실제 JWT 시크릿 · DB 비밀번호 | 시크릿. 프론트는 `.env.example`에 **키 이름만** · 백엔드는 `application*.yml`의 `${키:로컬기본값}`이 키 목록이고 실제 값은 환경변수로 |
 | `uploads/*` (`.gitkeep` 제외) | 사용자 업로드 파일 |
 | `seed-images/*` (`README.md` 제외) | 시연용 사진 — 팀 드라이브로 공유 |
 | `target/` · `node_modules/` · `dist/` | 빌드 산출물 |
@@ -235,9 +236,9 @@ Collaborators: 7명 전원 **Write**. Admin은 팀장만.
 ## 10. 일일 리듬과 git
 
 ```
-아침 (5분)   두 리포 git checkout dev && git pull → 로드맵에서 오늘 칸 → 브랜치 판다
+아침 (5분)   두 리포 git checkout main && git pull → 로드맵에서 오늘 칸 → 브랜치 판다(진행 중이면 git merge main)
 낮           티켓 [수정 허용 파일]만 · 커밋은 의도 단위로 여러 번 (push는 끝에 한 번이어도 됨)
-하루 끝 (5분) 판정 테스트 green → git diff --stat dev -- src/main (150줄 이하) → dev 머지·push → 채널 한 줄
+하루 끝 (5분) 판정 테스트 green → git diff --stat main -- src/main (150줄 이하) → dev 머지·push → 채널 한 줄
              worklog/<내이름>/D##.md 3줄 (머지 · 열었음 · 막힘)
 ```
 
@@ -258,12 +259,12 @@ Collaborators: 7명 전원 **Write**. Admin은 팀장만.
 
 ```bash
 # 시작
-git checkout dev && git pull
+git checkout main && git pull
 git checkout -b be-product-list
 
 # 상태 보기
 git status
-git diff --stat dev -- src/main   # 150줄 넘는지 (테스트·문서는 안 센다)
+git diff --stat main -- src/main   # 150줄 넘는지 (테스트·문서는 안 센다)
 git log --oneline -10
 
 # 커밋

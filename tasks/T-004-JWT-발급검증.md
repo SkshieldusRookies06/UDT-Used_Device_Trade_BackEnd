@@ -30,7 +30,7 @@ secret     32바이트 이상 (app.jwt.secret · 환경변수로 주입 가능)
 
 ## [수용 기준]
 
-- [ ] `security/JwtTokenProvider` — `createToken(userId, role, nickname)` · `validate(token)` ·
+- [ ] `security/JwtTokenProvider` — `createToken(userId, role, nickname)` · `validateToken(token)` ·
       `getUserId(token)` 제공
 - [ ] `security/JwtAuthenticationFilter` — `OncePerRequestFilter` 상속 ·
       `Authorization: Bearer` 헤더에서 토큰을 읽어 `SecurityContext`에 인증 객체 설정

@@ -5,13 +5,13 @@
 | 항목 | 내용 |
 |---|---|
 | 프로젝트명 | UDT (Used Device Trade) |
-| 문서 버전 | v0.1 |
+| 문서 버전 | v1.0 |
 | 작성일 | 2026-09-21 |
 | 작성자 | (이름) |
-| 최종 수정일 | 2026-09-21 |
+| 최종 수정일 | 2026-09-29 |
 
 > 정본: `SPEC.md` §4 · §5 · §7 · `common/ErrorCode.java` — 이 문서는 파생본이다.
-> **D4(1차 통합)에 실물과 대조해 확정한다.**
+> 2026-09-29 실물(컨트롤러·DTO·`GlobalExceptionHandler`)과 대조해 확정했다.
 
 ---
 
@@ -182,7 +182,7 @@ POST /api/auth/login
 { "success": true,
    "data": { "accessToken": "eyJhbGciOi…",
              "user": { "id": "3", "nickname": "구매자", "role": "MEMBER", "balanceKrw": 2000000 } },
-   "message": "로그인되었습니다", "timestamp": "…" }
+   "message": "로그인이 완료되었습니다", "timestamp": "…" }
 ```
 
 **토큰 만료 시 동작:** 401 응답 → 프론트 인터셉터가 인증 상태를 비우고 로그인 화면으로
@@ -306,8 +306,10 @@ POST /api/auth/login
    "buyerId": "2", "sellerId": "5",
    "buyerNickname": "구매자", "sellerNickname": "판매왕", "amountKrw": 850000,
    "status": "PAID", "courier": null, "trackingNo": null,
-   "createdAt": "2026-09-22T15:00:00+09:00", "confirmedAt": null }
+   "createdAt": "2026-09-22T15:00:00+09:00", "confirmedAt": null, "dispute": null }
 ```
+
+> `dispute` 키는 항상 있다 — 분쟁이 있는 거래를 상세 조회할 때만 객체, 그 외에는 `null` (SPEC §4.5).
 
 > **`buyerId`·`sellerId`는 화면이 "내가 구매자인가 판매자인가"를 판정하는 근거다.**
 > 거래 상세(SCR-005)의 상태별 액션 버튼이 여기에 걸려 있다. 닉네임은 중복될 수 있어 판정에 쓰지 않는다.
@@ -390,6 +392,7 @@ POST /api/auth/login
 | `EMAIL_ALREADY_EXISTS` | 409 | 이미 가입된 이메일입니다 | BR-M001 |
 | `PRODUCT_NOT_FOUND` | 404 | 상품을 찾을 수 없습니다 | — |
 | `PRODUCT_NOT_ON_SALE` | 409 | 판매 중인 상품이 아닙니다 | BR-T001 |
+| `PRODUCT_NOT_INSPECTING` | 409 | 검수 대기 중인 상품이 아닙니다 | BR-P005 (관리자 화면 전용) |
 | `SELF_PURCHASE_NOT_ALLOWED` | 400 | 본인이 등록한 상품은 구매할 수 없습니다 | BR-T002 |
 | `INSUFFICIENT_BALANCE` | 400 | 잔액이 부족합니다 | BR-T003 |
 | `WISH_ALREADY_EXISTS` | 409 | 이미 찜한 상품입니다 | BR-W001 |
@@ -419,8 +422,14 @@ Advice가 처리하는 스프링 예외:
 | `HttpMessageNotReadableException` | 400 `VALIDATION_ERROR` |
 | `MethodArgumentTypeMismatchException` | 400 `VALIDATION_ERROR` (형식 불량 id) |
 | `MissingServletRequestParameterException` | 400 `VALIDATION_ERROR` |
-| `NoResourceFoundException` | 404 |
+| `MaxUploadSizeExceededException` | 400 `FILE_TOO_LARGE` (multipart 전체 한도 초과) |
+| `HttpRequestMethodNotSupportedException` | 405 `METHOD_NOT_ALLOWED` |
+| `HttpMediaTypeNotSupportedException` | 415 `UNSUPPORTED_MEDIA_TYPE` |
+| `NoResourceFoundException` | 404 `RESOURCE_NOT_FOUND` |
+| `AccessDeniedException` | 403 `ACCESS_DENIED` (`@PreAuthorize` 거부) |
 | `Exception` | 500 `INTERNAL_SERVER_ERROR` |
+
+> `/admin/**` 요청에서 난 404·403·500은 봉투로 바꾸지 않고 다시 던진다 — 관리자 화면은 HTML 에러 페이지를 쓴다.
 
 ---
 

@@ -95,12 +95,12 @@ UDT-Used_Device_Trade-backend/
     │   ├── common/         ErrorCode · BusinessException · Advice · ApiResponse   BE-A
     │   ├── config/         CorsConfig · JpaAuditingConfig(BE-A) · SecurityConfig(BE-B)
     │   ├── entity/         8개 + enum 5                                          BE-A
-    │   ├── repository/     8개                                                   BE-A → 리소스 오너
-    │   ├── controller/     Health · Category · Product(껍데기)  → Auth(BE-B) · Transaction(BE-D) · Me·Dispute(BE-A)가 추가
+    │   ├── repository/     9개 (8 + MeQueryRepository)                           BE-A → 리소스 오너
+    │   ├── controller/     Health · Category · Product · ProductImage · Wish · Auth · Me · Transaction · Dispute
     │   ├── dto/            리소스 접두어가 오너
-    │   ├── security/       (아직 없음 — T-004 BE-B가 만든다)
-    │   ├── service/        (아직 없음 — 각 오너가 만든다)
-    │   └── admin/          AdminLoginController(GET /admin/login)만 있음 — 검수·분쟁 화면은 T-018 BE-B
+    │   ├── security/       JwtTokenProvider · JwtAuthenticationFilter · CustomUserDetailsService · UserPrincipal · CurrentUser   BE-B
+    │   ├── service/        리소스별 Service 9개 · FileStorageService(BE-A)
+    │   └── admin/          AdminLogin · AdminProduct(검수) · AdminDispute(분쟁) · AdminDisputeFile · 예외 핸들러   BE-B
     └── resources/
         ├── application.yml · application-local.yml · application-prod.yml · data.sql
         └── templates/      layout/base · fragments/nav · admin/login·products·disputes
@@ -121,16 +121,7 @@ UDT-Used_Device_Trade-backend/
 | 지금 잡을 티켓 (수용 기준까지) | [`tasks/README.md`](tasks/README.md) |
 | 브랜치 · 커밋 · PR · 머지 · 충돌 (두 리포 공통) | [`docs/참고/GitHub규약.md`](docs/참고/GitHub규약.md) |
 
-프론트 티켓은 프론트 리포 `tasks/`에. 아래는 D1 요약이고, D2 이후는 로드맵에 있다.
-
-| 담당 | D1 티켓 |
-|---|---|
-| BE-A | T-001 리포 셋업·전원 첫 기동 → T-002 엔티티·시드 확정 |
-| BE-B | T-004 JWT 발급·검증 |
-| BE-C | T-006 상품 목록·상세 실구현 |
-| BE-D | T-009 거래 상태 머신 |
-
-**T-001이 모두의 선행이다.** 오전에 먼저 끝낸다.
+프론트 티켓은 프론트 리포 `tasks/`에. 티켓별 진행 상태는 [`tasks/README.md`](tasks/README.md) 맨 위 표에 있다.
 
 ---
 
@@ -143,8 +134,8 @@ UDT-Used_Device_Trade-backend/
 | # | 과제 항목 | 파일 | 상태 |
 |---|---|---|---|
 | 1 | 도메인 설계서 | `docs/01-도메인설계서.md` | 작성 완료 |
-| 2 | Entity 설계서 | `docs/02-Entity설계서.md` | **N+1 캡처(D7) 대기** |
-| 3 | REST API 설계서 | `docs/03-REST-API설계서.md` | **D4 실물 대조 후 확정** |
+| 2 | Entity 설계서 | `docs/02-Entity설계서.md` | 작성 완료 (N+1 전후 캡처 반영) |
+| 3 | REST API 설계서 | `docs/03-REST-API설계서.md` | 작성 완료 (9/29 실물 대조) |
 | 4 | 화면 설계서 | `docs/04-화면설계서.md` | **와이어프레임(D3)·캡처(D8) 대기** |
 | 5 | React 컴포넌트와 Props 설계서 | `docs/05-React컴포넌트와Props설계서.md` | **D8 실물 재발췌** |
 
@@ -165,8 +156,10 @@ UDT-Used_Device_Trade-backend/
 ## 브랜치·커밋
 
 ```
-main                정본
- └── be-<작업명>    작업 브랜치
+main                    정본 · 시연. dev에서만, 팀장(BE-A)이 올린다
+ └── dev                통합. 작업 브랜치는 PR 없이 각자 여기로 머지
+      ├── be-<작업명>   백엔드 작업 브랜치 (main에서 따고 · main을 merge로 흡수)
+      └── docs-<문서명> 문서만 고치는 브랜치
 
 커밋   feat|fix|docs|refactor|chore|test(<범위>): 한 줄 [T-###]
        예) feat(product): 상품 목록 검색·페이징 API [T-006]
@@ -176,25 +169,20 @@ main                정본
 **backend를 먼저 머지한다.**
 
 > 위는 요약이다. **브랜치 → 커밋 → PR → 머지 → 충돌** 전체 규칙과 PR 템플릿 사용법은
-> [`docs/참고/GitHub규약.md`](docs/참고/GitHub규약.md) — `main`에는 PR 없이 들어가지 않는다.
+> [`docs/참고/GitHub규약.md`](docs/참고/GitHub규약.md) — `main`에는 팀장만, `dev`에서만 올린다.
 
 ---
 
-## 아직 비어 있는 것
+## 구현 현황
 
-| 오너 | 채울 것 |
+| 오너 | 구현된 것 |
 |---|---|
-| BE-A | 엔티티 검토·보완 · 시드 조정 · **`MeController/Service`(T-021)** · **`DisputeController/Service` · 증빙 파일(T-010)** |
-| BE-B | `security/`(JwtTokenProvider·필터) · `AuthController/Service` · `UserDetailsService` · `admin/` — **`SecurityConfig` 체인 3개는 골격이 있다**(`// TODO(T-005)`) |
-| BE-C | `ProductService`·`WishService` · 이미지 업로드 · 검색·페이징 · **N+1 튜닝** |
-| BE-D | **`TransactionService`(상태 전이 단독 오너 · BR-01~08 + `markDisputed`)** · `TransactionController` · 거래 테스트·게이트 확장(T-022) |
+| BE-A | 엔티티·시드 · `MeController/Service`(T-021) · `DisputeController/Service`·증빙 파일(T-010) · `FileStorageService`(T-023) · 인수 테스트 · 거래 게이트·테스트 보강(T-022) |
+| BE-B | `security/`(JWT 발급·필터·`UserDetailsService`) · `AuthController/Service` · `SecurityConfig` 체인 3개(T-004·T-005) · 관리자 화면(T-018) |
+| BE-C | `ProductService`·`WishService` · 이미지 업로드 · 검색·페이징 · N+1 튜닝(T-006~T-008·T-019) |
+| BE-D | `TransactionService`(상태 전이 단독 오너 · BR-01~08 + `markDisputed`) · `TransactionController` · 상태 머신 테스트(T-009) · 공통 예외 검증(T-003) |
 
-> **기동 직후 `check-api`는 10개 중 8개가 ok다.** RED 2개(`POST /api/auth/login (자격 오류)` · `로그인 → 토큰 → /api/me`)는
-> 둘 다 `AuthController`가 없어서이고, T-005가 들어가면 13/13가 된다(거래 3개도 로그인이 있어야 돈다). 8개보다 적으면 다른 문제다.
->
-> `ProductController`·`CategoryController`는 **하드코딩 껍데기**다(`// TODO(T-006)` 표시).
-> URL과 응답 형태는 계약이므로 그대로 두고 **본문만** Service 연결로 바꾼다.
-> 이 껍데기 덕분에 D1부터 프론트 3명이 실서버 주소로 작업할 수 있다.
+> **기동 후 `node seams/check-api.mjs`는 13/13 ok가 정상이다.** 하나라도 RED면 계약이 깨진 것이다.
 
 ## 첫 빌드 전에
 

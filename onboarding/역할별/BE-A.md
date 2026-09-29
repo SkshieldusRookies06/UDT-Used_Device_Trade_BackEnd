@@ -36,7 +36,7 @@
 | 5 | 머지 리뷰: 각 PR에서 (a) 판정 테스트 green 캡처 (b) 게이트 출력 (c) `git diff --stat` 한 화면 (d) 티켓 `[제약]` 밖 파일 없음 | 역할분담 §3.1 |
 
 ### 알아 둘 것
-- `GlobalExceptionHandler`의 `Exception.class` 핸들러가 405·415를 500으로 감싼다. 계약 밖이라 그대로 뒀다 — 여유 있으면 `ResponseEntityExceptionHandler` 상속으로(내 파일).
+- 405·415는 `GlobalExceptionHandler` 전용 핸들러가 `METHOD_NOT_ALLOWED`·`UNSUPPORTED_MEDIA_TYPE` 봉투로 반환한다(T-003 · `c91d224`).
 - `SPEC.md` 3행 `확인: (7명 이름)`과 설계서 `작성자 (이름)`, 온보딩 이름 칸 — **실명은 회의에서 채운다.**
 
 ---
@@ -58,7 +58,7 @@
 | 경로 | 내용 |
 |---|---|
 | `SPEC.md` | **계약 정본.** 코드와 충돌하면 이게 이긴다 |
-| `seams/check-api.mjs` | 계약 게이트 10개 검사 |
+| `seams/check-api.mjs` | 계약 게이트 13개 검사 (상품·인증·`/api/me` 10 + 거래 3) |
 | `mock/server.mjs` | 프론트가 쓰는 목 서버 |
 | `entity/` | 엔티티 8종 — **끝까지 나 단독. 인계 없음** |
 | `common/` | `ErrorCode` · `BusinessException` · `ApiResponse` · `@RestControllerAdvice` |
@@ -70,6 +70,7 @@
 | **`controller/MeController.java` · `service/MeService.java`** | **T-021** `/api/me/products·transactions·wishes` (신규) |
 | **`service/FileStorageService.java` · `controller/ProductImageController.java`** | **T-023** 파일 저장·검증·서빙 — 상품(BE-C)·분쟁(나) 공용 · 보안 검사 한 벌 (신규) |
 | **`controller/DisputeController.java` · `service/DisputeService.java` · `dto/Dispute*` · `admin/AdminDisputeFileController.java`** | **T-010** 분쟁 접수 · 증빙 업로드/다운로드 (신규) |
+| **`src/test/.../acceptance/**`** | 인수(판정) 테스트 전부 · **T-022** 거래 테스트 보강 (9/29 BE-D에서 이관) |
 
 ### 절대 안 건드린다
 
@@ -122,6 +123,7 @@
 | [T-021 마이페이지 API 3개](../../tasks/T-021-마이페이지-API.md) | **D3** | T-002 · T-005 | buyer1로 거래 4건·찜 2건, `role=x`는 400 |
 | [T-023 파일 저장·검증·서빙](../../tasks/T-023-파일저장-서빙.md) | **D3** | T-002 | 위장 파일 400 · `../` 경로 무효 · UUID 이름 · 이미지 GET 200 |
 | [T-010 분쟁 접수·증빙 파일](../../tasks/T-010-분쟁-증빙파일.md) | **D5~D6** | T-009 · T-023 | 증빙 첨부 분쟁 → 관리자 다운로드 → 강제 환불이 돈다 · 제3자 다운로드 403 |
+| [T-022 거래 게이트·테스트 보강](../../tasks/T-022-거래-게이트확장-테스트.md) | 9/29 (이관) | T-009 | 게이트 13/13(실서버·목) · `PurchaseEdgeCaseTest` · `InspectionTest` green |
 
 **T-001은 D1 오전에 끝낸다.** 여섯 명이 이것을 기다리고 있다.
 
@@ -178,8 +180,8 @@ IntelliJ ▶ UdtApplication 실행 (Active profiles: local)
 node seams/check-api.mjs
 ```
 
-`확인:` **10개 중 8개 ok가 정상이다.** red 2개는 `POST /api/auth/login (자격 오류)`와 `로그인 → 토큰 → /api/me` — 둘 다 `AuthController`가 없어서다.
-`AuthController`가 아직 없기 때문이고 BE-B의 T-004가 채운다. **전부 red면 다른 문제다** — DB 아니면 포트.
+`확인:` **13개 중 8개 ok가 정상이다.** red 5개는 로그인과 로그인이 필요한 거래 검사다 — `AuthController`가 아직 없기 때문이고
+BE-B의 T-004·T-005가 채우면 13/13이 된다. **전부 red면 다른 문제다** — DB 아니면 포트.
 
 **6) push하고 README의 `<조직>` 자리를 채운다**
 두 리포가 서로를 링크하는 게 리포 2개 구성에서 길을 잃지 않는 유일한 장치다.
