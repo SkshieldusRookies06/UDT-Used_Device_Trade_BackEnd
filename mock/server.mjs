@@ -20,7 +20,7 @@ const product = (id) => ({
 const ME = { id: "2", email: "buyer1@udt.test", nickname: "구매자", role: "MEMBER", balanceKrw: 2000000 };
 
 const txn = (id, status, extra = {}) => ({
-  id: String(id), productId: "20", productTitle: "아이맥 24 M1",
+  id: String(id), productId: "20", productTitle: "아이맥 24 M1", thumbnailUrl: null,
   buyerId: "2", sellerId: "5", buyerNickname: "구매자", sellerNickname: "판매왕",
   amountKrw: 1290000, status, courier: null, trackingNo: null,
   createdAt: now(), confirmedAt: null, dispute: null, ...extra,
@@ -122,7 +122,7 @@ createServer(async (req, res) => {
     // 계약 §4.5: amountKrw = 그 상품 가격 · 구매자 잔액 즉시 차감(에스크로) · 새 거래는 PAID
     const bought = product(buyM[1]);
     const newId = String(Object.keys(TXNS).length + 1);
-    TXNS[newId] = txn(newId, "PAID", { productId: bought.id, productTitle: bought.title, amountKrw: bought.priceKrw, sellerNickname: bought.sellerNickname });
+    TXNS[newId] = txn(newId, "PAID", { productId: bought.id, productTitle: bought.title, thumbnailUrl: bought.thumbnailUrl ?? null, amountKrw: bought.priceKrw, sellerNickname: bought.sellerNickname });
     ME.balanceKrw -= bought.priceKrw;
     return send(201, ok(TXNS[newId], "구매 요청이 완료되었습니다"));
   }

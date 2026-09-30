@@ -302,7 +302,7 @@ POST /api/auth/login
 요청 본문 없음. 성공 **201**:
 
 ```json
-{ "id": "7", "productId": "12", "productTitle": "맥북 에어 M2 13인치",
+{ "id": "7", "productId": "12", "productTitle": "맥북 에어 M2 13인치", "thumbnailUrl": null,
    "buyerId": "2", "sellerId": "5",
    "buyerNickname": "구매자", "sellerNickname": "판매왕", "amountKrw": 850000,
    "status": "PAID", "courier": null, "trackingNo": null,
@@ -310,6 +310,7 @@ POST /api/auth/login
 ```
 
 > `dispute` 키는 항상 있다 — 분쟁이 있는 거래를 상세 조회할 때만 객체, 그 외에는 `null` (SPEC §4.5).
+> `thumbnailUrl` — 상품 대표 사진 경로(목록과 같은 규칙) · 사진이 없으면 `null`.
 
 > **`buyerId`·`sellerId`는 화면이 "내가 구매자인가 판매자인가"를 판정하는 근거다.**
 > 거래 상세(SCR-005)의 상태별 액션 버튼이 여기에 걸려 있다. 닉네임은 중복될 수 있어 판정에 쓰지 않는다.
@@ -447,7 +448,26 @@ node seams/check-api.mjs [base_url]
 같은 스크립트를 목 서버와 실서버 양쪽에 돌린다. 목 서버가 계약을 어기면 프론트가
 처음부터 틀린 것을 만들게 되므로, 목도 이 검사를 통과해야 한다.
 
-`[D4] 실행 결과 캡처 첨부`
+실행 결과 (2026-09-30 · 실서버 · local 프로필 · 포트 8081로 기동):
+
+```
+$ node seams/check-api.mjs http://localhost:8081
+ok   GET /api/health
+ok   GET /api/categories
+ok   GET /api/products
+ok   GET /api/products (빈 결과)
+ok   GET /api/products (size 상한)
+ok   GET /api/products (음수 page)
+ok   GET /api/products/{id} + 에러
+ok   POST /api/auth/login (자격 오류)
+ok   보호 엔드포인트 401
+ok   로그인 → 토큰 → /api/me
+ok   POST /api/products/{id}/purchase
+ok   GET /api/transactions/{id}
+ok   PATCH /api/transactions/{id}/confirm (PAID → 409)
+
+OK: http://localhost:8081 계약 준수
+```
 
 ---
 

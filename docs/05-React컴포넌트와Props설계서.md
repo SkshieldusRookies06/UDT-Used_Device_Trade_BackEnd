@@ -312,7 +312,7 @@ export default function ProductListPage() {
 
 | 항목 | 적용 |
 |---|---|
-| 라우트 단위 코드 분할 | `[D7] React.lazy + Suspense 적용 검토` |
+| 라우트 단위 코드 분할 | 미적용 — 화면 10개 규모라 번들 분할 이득이 작아 범위에서 뺐다 |
 | 이미지 | `object-fit: cover` + 고정 비율로 레이아웃 흔들림 방지 |
 | 불필요한 리렌더 | 전역 상태를 2개로 제한해 구독 범위를 좁힘 |
 
