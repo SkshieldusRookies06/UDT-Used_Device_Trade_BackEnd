@@ -391,7 +391,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 ### 4.8 `POST /api/transactions/{id}/disputes` (multipart)
 
 - 인증: **구매자 본인만** · 전제 상태 `PAID` 또는 `SHIPPING`
-- 파트 `dispute`(JSON: `{"reason":"..."}` 10~500자) + `files`(0~3장 · jpg/png/pdf · 각 5MB)
+- 파트 `dispute`(JSON: `{"reason":"..."}` 10~500자) + `files`(0~3장 · jpg/png/webp/pdf · 각 5MB)
 - 성공 201 · `data` = `{"id":"3","transactionId":"7","status":"OPEN","reason":"...","files":[{"id":"9","originalName":"대화캡처.png"}],"createdAt":"..."}`
 - 에러: 409 `DISPUTE_ALREADY_EXISTS` · 409 `INVALID_TRANSACTION_STATUS` · 403 `TRANSACTION_FORBIDDEN`(구매자 아님) ·
   400 `VALIDATION_ERROR`(+`fields[]` · 사유 10~500자) · 400 `FILE_COUNT_EXCEEDED`(4장 이상) ·
@@ -710,3 +710,4 @@ main에 들어간다.
 | 2026-09-29 | §4.5 · §4.9 · §7 | Transaction 예시에 `"dispute":null` 추가(항상 존재하는 키) · §7 다이어그램에서 공개 API permitAll 위치를 `@Order(1)` 체인으로 정정 | 코드·게이트·목은 이미 `dispute` 키를 요구하는데 정본 예시에 없었다. 공개 API가 "그 외" 체인에 있다고 읽히면 체인 순서를 잘못 고친다 |
 | 2026-09-29 | §2.6 · §5 | `PRODUCT_NOT_INSPECTING`(409) 추가 — 검수대기가 아닌 상품을 승인·반려할 때. 25 → 26개 | 명세가 없어 `INVALID_TRANSACTION_STATUS`를 임시로 썼고, 관리자 검수 화면에 "현재 거래 상태에서는…"이 떴다. 관리자 화면 전용이라 게이트·목·프론트는 무변경 |
 | 2026-09-30 | §0 · §4.5 | §0 에러 `fields[]` 원소 모양 `{name, message}` 명시 · §4.5 Transaction에 `thumbnailUrl`(상품 대표 사진 · 없으면 null) 추가 | `fields[]` 원소 모양이 파생본(03 설계서)에만 있어 프론트 송장 폼이 `f.field`를 읽었다. 거래 화면은 이미 `thumbnailUrl`을 읽고 있었는데 응답에 없어 항상 "사진 없음"이었다 — 필드 추가(하위 호환)만으로 해결 |
+| 2026-09-30 | §4.8 | 분쟁 증빙 허용 형식 `jpg/png/pdf` → `jpg/png/webp/pdf` | 서버(`FileStorageService` disputes 허용 목록)는 처음부터 webp를 받고 있었는데 계약에만 빠져 있었다. 프론트 증빙 선택기가 PDF를 못 고르던 버그(T-017)를 고치며 세 곳을 맞춘다 — 코드 무변경 |
