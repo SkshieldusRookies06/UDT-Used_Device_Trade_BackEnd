@@ -1,6 +1,6 @@
 # UDT — 중고 전자기기 안전거래 플랫폼 · SPEC
 
-**v1.0 확정 · 2026-09-21 작성 · 2026-09-29 개정(문서 정합 · 말미 개정 이력) · 확인: (7명 이름 — D1 회의 후 채운다)**
+**v1.0 확정 · 2026-09-21 작성 · 2026-09-30 개정(문서 정합 · 말미 개정 이력) · 확인: (7명 이름 — D1 회의 후 채운다)**
 
 > **이 파일의 정본은 `UDT-Used_Device_Trade-backend` 리포에만 있다.**
 > 프론트 리포에는 복사하지 않는다 — 복사본은 반드시 낡는다(§12).
@@ -23,7 +23,7 @@
 | 식별자 | **JSON에서 문자열** — DTO의 id를 `String`으로. 전역 Long 문자열화 금지 |
 | 날짜 | `OffsetDateTime` → ISO 8601 · `spring.jackson.time-zone=Asia/Seoul` · **`LocalDateTime` 엔티티에서도 금지** |
 | 금액 | `Long` · 원 단위 · 필드명 `priceKrw`·`amountKrw` |
-| 응답 봉투 | 성공 `{"success":true,"data":…,"message":"…","timestamp":"…"}` · 목록은 `data.content[]` + `data.page{...}` · 에러 `{"success":false,"statusCode":404,"code":"…","message":"…","fields":null,"timestamp":"…"}` — **`fields` 키는 항상 있다**(검증 에러만 배열, 나머지 `null`). Security 필터가 만드는 401도 같은 `ErrorResponse`로 직렬화한다 |
+| 응답 봉투 | 성공 `{"success":true,"data":…,"message":"…","timestamp":"…"}` · 목록은 `data.content[]` + `data.page{...}` · 에러 `{"success":false,"statusCode":404,"code":"…","message":"…","fields":null,"timestamp":"…"}` — **`fields` 키는 항상 있다**(검증 에러만 배열, 나머지 `null`). 배열 원소는 `{"name":"<입력 필드명>","message":"<사유>"}`. Security 필터가 만드는 401도 같은 `ErrorResponse`로 직렬화한다 |
 | 에러 처리 | `@RestControllerAdvice` **한 곳** (`common/GlobalExceptionHandler`) |
 | 응답 객체 | **DTO만 · 엔티티 직접 반환 금지** · DTO 변환은 Service 안에서 |
 | API 호출 | axios 인스턴스 1개(`src/api/client.js`) · `timeout: 10000` · 인터셉터가 **`res.data.data`** 반환 (**예외: `responseType: "blob"`이면 `res.data`** — 파일 다운로드) · `success:false`면 `code`·`message`로 reject · `/api/auth/**`는 401 처리 제외 |
@@ -361,11 +361,13 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 - 요청 바디 없음
 - 성공 **201** · `data` = Transaction 객체
 ```json
-{"id":"7","productId":"12","productTitle":"맥북 에어 M2 13인치",
+{"id":"7","productId":"12","productTitle":"맥북 에어 M2 13인치","thumbnailUrl":null,
  "buyerId":"2","sellerId":"5","buyerNickname":"구매자","sellerNickname":"판매왕",
  "amountKrw":850000,"status":"PAID","courier":null,"trackingNo":null,
  "createdAt":"2026-09-22T15:00:00+09:00","confirmedAt":null,"dispute":null}
 ```
+> **`thumbnailUrl`** — 상품 대표 사진 경로. 규칙은 §4.2 목록과 같다(`sortOrder` 첫 장 · 상대경로 `/api/products/{id}/images/{imageId}` · 0장이면 **`null`**). 모든 거래 응답(구매·송장·확정·상세·`/api/me/transactions`)에 들어간다.
+>
 > **`dispute` 키는 항상 있다** — 분쟁이 있는 거래를 상세(`GET /api/transactions/{id}`)로 볼 때만 객체이고, 구매·송장·확정 응답과 목록(`/api/me/transactions`)은 `null`. 키 자체가 빠지면 게이트가 실패한다.
 >
 > **`buyerId`·`sellerId`(문자열)는 화면이 "내가 구매자인가 판매자인가"를 판정하는 유일한 근거다**
@@ -707,3 +709,4 @@ main에 들어간다.
 | 2026-09-27 | 테스트 | 인수 테스트를 티켓 단위(4파일)에서 **기능 단위 19클래스**로 분리 — `acceptance/transaction`(BE-D 11) · `product`(BE-C 5) · `auth`(BE-B 3). 클래스 이름 `[BE-X ①②]` = `onboarding/역할별/BE-X.md` 0절 표 번호. 아직 없는 메서드·클래스는 리플렉션으로 찾아 **구현 전에도 main이 컴파일된다**. 업로드 임시 폴더를 JVM 단위로 바꿈(@TempDir은 클래스마다 지워져 컨텍스트를 공유하는 두 번째 클래스부터 업로드가 깨졌다) | 한 파일에 여러 개정이 섞여 있으면 red 하나가 어느 줄 몫인지 안 보인다. 한 줄 고치고 그 클래스만 돌려 초록을 확인하게 |
 | 2026-09-29 | §4.5 · §4.9 · §7 | Transaction 예시에 `"dispute":null` 추가(항상 존재하는 키) · §7 다이어그램에서 공개 API permitAll 위치를 `@Order(1)` 체인으로 정정 | 코드·게이트·목은 이미 `dispute` 키를 요구하는데 정본 예시에 없었다. 공개 API가 "그 외" 체인에 있다고 읽히면 체인 순서를 잘못 고친다 |
 | 2026-09-29 | §2.6 · §5 | `PRODUCT_NOT_INSPECTING`(409) 추가 — 검수대기가 아닌 상품을 승인·반려할 때. 25 → 26개 | 명세가 없어 `INVALID_TRANSACTION_STATUS`를 임시로 썼고, 관리자 검수 화면에 "현재 거래 상태에서는…"이 떴다. 관리자 화면 전용이라 게이트·목·프론트는 무변경 |
+| 2026-09-30 | §0 · §4.5 | §0 에러 `fields[]` 원소 모양 `{name, message}` 명시 · §4.5 Transaction에 `thumbnailUrl`(상품 대표 사진 · 없으면 null) 추가 | `fields[]` 원소 모양이 파생본(03 설계서)에만 있어 프론트 송장 폼이 `f.field`를 읽었다. 거래 화면은 이미 `thumbnailUrl`을 읽고 있었는데 응답에 없어 항상 "사진 없음"이었다 — 필드 추가(하위 호환)만으로 해결 |
