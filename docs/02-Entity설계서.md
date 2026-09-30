@@ -441,7 +441,9 @@ public abstract class BaseEntity {
 
 - **계약 검증 스크립트**가 Repository·Service 동작을 API 레벨에서 간접 검증한다
   (`node seams/check-api.mjs` — 13개 검사).
-- `[D7] @DataJpaTest — 고유 제약 위반 · 연관관계 매핑 확인 (여유 시)`
+- **인수 테스트**(`src/test/.../acceptance/` · `@SpringBootTest` + 실제 MariaDB · 테스트마다 롤백)가 엔티티·Repository를
+  실제 DB로 검증한다 — 잔액 차감·상태 전이의 원자성, 상품당 거래 여러 건(`TransactionPerProductTest`),
+  감사 필드(`JpaAuditingTest`), 시드 시각·인코딩(`SeedTimestampTest`). 전체 122개.
 
 ---
 
