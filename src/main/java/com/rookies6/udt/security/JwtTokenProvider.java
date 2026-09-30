@@ -40,7 +40,7 @@ public class JwtTokenProvider {
                 .claim("nickname", nickname)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(key)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }
 
