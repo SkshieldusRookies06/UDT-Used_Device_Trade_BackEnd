@@ -6,6 +6,7 @@ import com.rookies6.udt.entity.Transaction;
 import java.time.OffsetDateTime;
 
 public record TransactionResponse(String id, String productId, String productTitle,
+                                  String thumbnailUrl,
                                   String buyerId, String sellerId,
                                   String buyerNickname, String sellerNickname,
                                   long amountKrw, String status,
@@ -22,6 +23,10 @@ public record TransactionResponse(String id, String productId, String productTit
                 String.valueOf(tx.getId()),
                 String.valueOf(tx.getProduct().getId()),
                 tx.getProduct().getTitle(),
+                tx.getProduct().getImages().isEmpty()
+                        ? null
+                        : "/api/products/" + tx.getProduct().getId()
+                        + "/images/" + tx.getProduct().getImages().get(0).getId(),
                 String.valueOf(tx.getBuyer().getId()),
                 String.valueOf(tx.getProduct().getSeller().getId()),
                 tx.getBuyer().getNickname(),
