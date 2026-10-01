@@ -7,7 +7,7 @@
 | 프로젝트명 | UDT (Used Device Trade) |
 | 문서 버전 | v0.2                    |
 | 작성일 | 2026-09-28              |
-| 작성자 | 원종현                     |
+| 작성자 | 윤동호, 원종현                     |
 | 최종 수정일 | 2026-09-21              |
 
 > 정본: `src/main/java/com/rookies6/udt/entity/` · `application-local.yml` · `data.sql`

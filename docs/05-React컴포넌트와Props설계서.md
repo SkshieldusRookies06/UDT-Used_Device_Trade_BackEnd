@@ -5,13 +5,13 @@
 | 항목 | 내용 |
 |---|---|
 | 프로젝트명 | UDT (Used Device Trade) |
-| 문서 버전 | v0.1 |
+| 문서 버전 | v1.0 |
 | 작성일 | 2026-09-21 |
-| 작성자 | (이름) |
-| 최종 수정일 | 2026-09-21 |
+| 작성자 | 윤동호 |
+| 최종 수정일 | 2026-10-01 |
 
 > 정본: `../UDT-Used_Device_Trade-frontend/src/`(형제 리포) · `04-화면설계서.md`
-> **D3에 골격을 작성하고, D8에 실제 코드에서 재발췌한다.**
+> D3에 골격을 작성하고, 2026-10-01 실제 코드(프론트 main `9424dd0`)에서 재발췌했다.
 
 ---
 
@@ -134,7 +134,7 @@ src/
     ├── ProductDetailPage/
     ├── ProductNewPage/
     ├── MyPage/
-    ├── TransactionDetailPage/
+    ├── TransactionDetailPage/ index.jsx · actions.js(상태×역할 → 버튼 판정)
     ├── LoginPage/ · SignupPage/
     └── NotFoundPage/ · ErrorPage/
 ```
@@ -166,9 +166,11 @@ src/
 | 이름 | 타입 | 필수 | 기본값 |
 |---|---|---|---|
 | `children` | node | Y | — |
-| `variant` | `"primary"\|"secondary"\|"danger"` | N | `"primary"` |
+| `variant` | `"primary"\|"secondary"\|"danger"\|"ghost"` | N | `"primary"` |
+| `size` | `"sm"\|"md"\|"lg"` | N | `"sm"` |
 | `type` | `"button"\|"submit"` | N | `"button"` |
 | `disabled` | bool | N | `false` |
+| `loading` | bool | N | `false` — 켜지면 작은 스피너 표시 + 비활성(중복 제출 방지) |
 | `onClick` | func | N | — |
 
 ### StatusBadge / LoadingSpinner / Pagination / RequireAuth
@@ -176,7 +178,7 @@ src/
 | 컴포넌트 | Props |
 |---|---|
 | `StatusBadge` | `status: string` (필수) |
-| `LoadingSpinner` | `label: string` (기본 "불러오는 중…") |
+| `LoadingSpinner` | `size: "sm"\|"md"` (기본 `"md"`) · `label: string` (기본 "불러오는 중…") |
 | `Pagination` | `page: {number, totalPages, first, last}` · `onChange: func` |
 | `RequireAuth` | `children: node` |
 
@@ -274,37 +276,82 @@ client.interceptors.response.use(
 
 ## 6. 컴포넌트 구현 골격
 
+실제 구현 발췌 — `src/pages/ProductListPage/index.jsx` (프론트 리포 main `9424dd0` · 2026-10-01).
+검색어·카테고리·페이지는 URL 쿼리가 정본이고(§4.3), 네 상태가 렌더링에서 그대로 네 갈래로 나뉜다.
+
 ```jsx
 export default function ProductListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get("q") ?? "";
+  const categoryId = searchParams.get("categoryId") ?? "";
   const page = Number(searchParams.get("page") ?? 0);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);   // 다시 시도 버튼이 +1
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    let alive = true;                       // 언마운트 후 setState 방지
-    setLoading(true); setError(null);
-    fetchProducts({ q: q || undefined, page, size: 12 })
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    fetchProducts({
+      q: q || undefined,
+      categoryId: categoryId || undefined,
+      page,
+      size: SIZE,
+    })
       .then((res) => alive && setData(res))
       .catch((e) => alive && setError(e))
       .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [q, page, reloadKey]);
+    return () => {
+      alive = false;
+    };
+  }, [q, categoryId, page, reloadKey]);
 
-  if (loading) return <LoadingSpinner />;
-  if (error)   return <ErrorState message={error.message} onRetry={…} />;
-  if (data.content.length === 0) return <EmptyState />;
-  return <Grid items={data.content} />;
-}
+  // …검색 폼·카테고리 버튼 생략…
+
+      {loading && <LoadingSpinner />}
+
+      {!loading && error && (
+        <div className={styles.state}>
+          <p>{error.message}</p>
+          <Button variant="secondary" onClick={() => setReloadKey((v) => v + 1)}>
+            다시 시도
+          </Button>
+        </div>
+      )}
+
+      {!loading && !error && data?.content?.length === 0 && (
+        <div className={styles.state}>
+          <p>조건에 맞는 상품이 없습니다.</p>
+          <p className={styles.hint}>검색어를 지우거나 다른 단어로 찾아보세요.</p>
+        </div>
+      )}
+
+      {!loading && !error && data?.content && data.content.length > 0 && (
+        <>
+          <ul className={styles.grid}>
+            {data.content.map((product) => (
+              <li key={product.id}>
+                <ProductCard product={product} />
+              </li>
+            ))}
+          </ul>
+          <Pagination page={data.page} onChange={handlePageChange} />
+        </>
+      )}
 ```
 
-네 상태가 코드에서 그대로 네 갈래로 보인다. 나머지 화면도 같은 골격을 따른다.
+| 장치 | 역할 |
+|---|---|
+| `let alive` | 응답이 오기 전에 화면을 떠나면 `setState`를 막는다 (언마운트 후 갱신 경고 방지) |
+| `reloadKey` | "다시 시도"가 `+1` → `useEffect`가 같은 조건으로 재요청 |
+| `error.message` | 인터셉터가 정규화한 서버 문구(§5.3)를 그대로 표시 |
+| 빈 결과 분기 | `content`가 `[]`일 때만 — 로딩·에러와 섞이지 않는다 |
 
-`[D8] 각 화면 실제 구현 발췌로 교체`
+같은 네 상태 골격(`LoadingSpinner` · 에러 + `reloadKey` 다시 시도 · 빈 결과 · 데이터)을
+`ProductDetailPage` · `MyPage` · `TransactionDetailPage`도 따른다.
 
 ---
 
@@ -326,4 +373,4 @@ export default function ProductListPage() {
 - [x] 공통 컴포넌트의 사용 화면이 2개 이상이다
 - [x] API 호출이 한 레이어에 모여 있다
 - [x] 에러 처리 방식이 한 곳에 정의되어 있다
-- [ ] 전 화면 구현 완료 후 재발췌 (D8)
+- [x] 전 화면 구현 완료 후 재발췌 (2026-10-01 · 프론트 main `9424dd0` 기준 — §2.3 파일 구조 · §3 Props · §6 구현 발췌)
