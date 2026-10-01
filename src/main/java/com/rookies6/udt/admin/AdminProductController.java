@@ -3,11 +3,13 @@ package com.rookies6.udt.admin;
 import com.rookies6.udt.common.BusinessException;
 import com.rookies6.udt.service.ProductService;
 import com.rookies6.udt.service.TransactionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,16 +45,17 @@ public class AdminProductController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/products/{id}/reject")
     public String reject(@PathVariable Long id,
-                         @ModelAttribute("reason") String reason,
+                         @Valid @ModelAttribute RejectForm form,
+                         BindingResult bindingResult,   // 반드시 @Valid 바로 뒤
                          Model model) {
-        if (reason == null || reason.isBlank()) {
-            model.addAttribute("rejectError", "반려 사유를 입력해주세요");
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("rejectError",
+                    bindingResult.getFieldError("reason").getDefaultMessage());
             model.addAttribute("products", productService.findInspectingProducts());
-            return "admin/products"; // redirect 아님 — T-018 수용 기준
+            return "admin/products";   // redirect 아님
         }
-
         try {
-            transactionService.rejectInspection(id, reason); // BR-02
+            transactionService.rejectInspection(id, form.reason());  // BR-02
         } catch (BusinessException e) {
             log.warn("상품 반려 실패 - productId={}, code={}", id, e.getErrorCode().name());
             model.addAttribute("rejectError", e.getErrorCode().getMessage());
