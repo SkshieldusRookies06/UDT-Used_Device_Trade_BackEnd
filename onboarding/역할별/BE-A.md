@@ -338,7 +338,7 @@ ls uploads/products                      # UUID 이름만 보여야 한다
    Dispute 저장 (사유)
    증빙 파일들을 DisputeFile 로 저장 (내 FileStorageService · store(file, "disputes"))
 ```
-> 파일 저장은 T-023에서 내가 만든 `FileStorageService`다. 분쟁용 허용 목록(jpg·png·pdf)은 subdir로 구분한다.
+> 파일 저장은 T-023에서 내가 만든 `FileStorageService`다. 분쟁용 허용 목록(jpg·png·webp·pdf)은 subdir로 구분한다.
 
 **2) 증빙 다운로드에 권한 검사를 반드시 넣는다**
 

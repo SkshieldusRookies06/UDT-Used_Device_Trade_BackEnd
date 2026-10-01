@@ -24,8 +24,8 @@
                     <button type="submit">승인</button>
                 </form>
                 <form th:action="@{/admin/products/{id}/reject(id=${p.id})}" method="post" style="display:inline">
-                    <input type="text" name="reason" placeholder="반려 사유">
                     <button type="submit">반려</button>
+                    <input type="text" name="reason" placeholder="반려 사유">
                 </form>
             </td>
         </tr>

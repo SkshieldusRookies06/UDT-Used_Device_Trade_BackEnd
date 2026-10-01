@@ -344,7 +344,7 @@ POST /api/auth/login
 
 **POST /api/transactions/{id}/disputes**
 
-파트: `dispute`(JSON `{ "reason": "..." }` 10~500자) + `files`(0~3개 · jpg/png/pdf · 각 5MB)
+파트: `dispute`(JSON `{ "reason": "..." }` 10~500자) + `files`(0~3개 · jpg/png/webp/pdf · 각 5MB)
 전제 상태: `PAID` 또는 `SHIPPING`
 성공 **201**: `{ "id", "transactionId", "status", "reason", "files":[{"id","originalName"}], "createdAt" }`
 에러: 409 `DISPUTE_ALREADY_EXISTS` · 409 `INVALID_TRANSACTION_STATUS` · 403 `TRANSACTION_FORBIDDEN` ·
@@ -423,6 +423,7 @@ Advice가 처리하는 스프링 예외:
 | `HttpMessageNotReadableException` | 400 `VALIDATION_ERROR` |
 | `MethodArgumentTypeMismatchException` | 400 `VALIDATION_ERROR` (형식 불량 id) |
 | `MissingServletRequestParameterException` | 400 `VALIDATION_ERROR` |
+| `MissingServletRequestPartException` | 400 `VALIDATION_ERROR` (multipart 필수 파트 누락) |
 | `MaxUploadSizeExceededException` | 400 `FILE_TOO_LARGE` (multipart 전체 한도 초과) |
 | `HttpRequestMethodNotSupportedException` | 405 `METHOD_NOT_ALLOWED` |
 | `HttpMediaTypeNotSupportedException` | 415 `UNSUPPORTED_MEDIA_TYPE` |
