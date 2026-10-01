@@ -136,15 +136,15 @@ UDT-Used_Device_Trade-backend/
 | 1 | 도메인 설계서 | `docs/01-도메인설계서.md` | 작성 완료 |
 | 2 | Entity 설계서 | `docs/02-Entity설계서.md` | 작성 완료 (N+1 전후 캡처 반영) |
 | 3 | REST API 설계서 | `docs/03-REST-API설계서.md` | 작성 완료 (9/29 실물 대조) |
-| 4 | 화면 설계서 | `docs/04-화면설계서.md` | **와이어프레임(D3)·캡처(D8) 대기** |
-| 5 | React 컴포넌트와 Props 설계서 | `docs/05-React컴포넌트와Props설계서.md` | **D8 실물 재발췌** |
+| 4 | 화면 설계서 | `docs/04-화면설계서.md` + [피그마](https://www.figma.com/design/5rUQ65BZRIlQr5RbdwF5Mv/UDT-Used_Device_Safe_Trade?node-id=3-2&p=f&t=WPxyqh3nrdWFCiTP-0) | 작성 완료 — 와이어프레임·화면은 피그마 |
+| 5 | React 컴포넌트와 Props 설계서 | `docs/05-React컴포넌트와Props설계서.md` | 작성 완료 (10/1 실물 재발췌) |
 
 ### 그 외
 
 | 항목 | 위치 | 상태 |
 |---|---|---|
-| 개인 회고록 7명분 | `docs/회고록/` (양식 포함) | D9 |
-| 발표 대본 | `docs/참고/발표대본.md` | 슬라이드는 D9 |
+| 개인 회고록 7명분 | `docs/회고록/` (양식 포함) | 작성 중 |
+| 발표 대본 · 슬라이드 | `docs/참고/발표대본.md` | 작성 중 |
 | 기획서 · 아키텍처 · 역할분담 · 예상질문 | `docs/참고/` | 작성 완료 |
 | 일일 보고 | `docs/참고/일일보고/` (양식 포함) | 매일 |
 
