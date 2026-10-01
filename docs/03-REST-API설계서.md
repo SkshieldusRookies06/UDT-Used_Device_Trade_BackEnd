@@ -423,6 +423,7 @@ Advice가 처리하는 스프링 예외:
 | `HttpMessageNotReadableException` | 400 `VALIDATION_ERROR` |
 | `MethodArgumentTypeMismatchException` | 400 `VALIDATION_ERROR` (형식 불량 id) |
 | `MissingServletRequestParameterException` | 400 `VALIDATION_ERROR` |
+| `MissingServletRequestPartException` | 400 `VALIDATION_ERROR` (multipart 필수 파트 누락) |
 | `MaxUploadSizeExceededException` | 400 `FILE_TOO_LARGE` (multipart 전체 한도 초과) |
 | `HttpRequestMethodNotSupportedException` | 405 `METHOD_NOT_ALLOWED` |
 | `HttpMediaTypeNotSupportedException` | 415 `UNSUPPORTED_MEDIA_TYPE` |
