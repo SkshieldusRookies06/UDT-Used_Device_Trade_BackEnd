@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,7 +19,7 @@ import org.springframework.http.MediaType;
  * 실제로 9/28 BE-D의 POST/PATCH 불일치가 500으로 보여 진단이 늦어졌다.
  */
 @AcceptanceTest
-@DisplayName("[BE-A] 계약 밖 요청 — 405·415는 500이 아니라 제 상태 코드로 나온다")
+@DisplayName("[BE-A] 계약 밖 요청 — 405·415·필수 파트 누락은 500이 아니라 제 상태 코드로 나온다")
 class ProtocolErrorTest extends AcceptanceSupport {
 
     @Test
@@ -51,5 +52,33 @@ class ProtocolErrorTest extends AcceptanceSupport {
                 .andExpect(jsonPath("$.code", is("UNSUPPORTED_MEDIA_TYPE")))
                 .andExpect(jsonPath("$", hasKey("fields")))          // 봉투 규약: fields 키는 항상 있다
                 .andExpect(jsonPath("$.fields", nullValue()));
+    }
+
+    @Test
+    @DisplayName("상품 등록에 product 파트 없이 → 400 VALIDATION_ERROR (500 아님)")
+    void 상품_등록_product_파트_누락은_400() throws Exception {
+        User seller = member("pe-nopart", 0L);
+
+        mvc.perform(multipart("/api/products")
+                        .file(png("a.png"))
+                        .with(authentication(memberAuth(seller))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.code", is("VALIDATION_ERROR")))
+                .andExpect(jsonPath("$", hasKey("fields")));
+    }
+
+    @Test
+    @DisplayName("분쟁 접수에 dispute 파트 없이 → 400 VALIDATION_ERROR (500 아님)")
+    void 분쟁_접수_dispute_파트_누락은_400() throws Exception {
+        User buyer = member("pe-nodispute", 1_000_000L);
+        Long txId = paidTransaction(buyer, onSaleProduct(member("pe-seller2", 0L), 100_000L));
+
+        mvc.perform(multipart("/api/transactions/{id}/disputes", txId)
+                        .with(authentication(memberAuth(buyer))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.code", is("VALIDATION_ERROR")))
+                .andExpect(jsonPath("$", hasKey("fields")));
     }
 }

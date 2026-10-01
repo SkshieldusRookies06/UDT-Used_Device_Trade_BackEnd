@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
@@ -44,7 +45,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class,
-            MissingServletRequestParameterException.class
+            MissingServletRequestParameterException.class,
+            MissingServletRequestPartException.class
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception e) {
         return ResponseEntity.status(ErrorCode.VALIDATION_ERROR.getStatus())
