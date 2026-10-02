@@ -1,6 +1,6 @@
 # UDT — 중고 전자기기 안전거래 플랫폼 · SPEC
 
-**v1.0 확정 · 2026-09-21 작성 · 2026-09-30 개정(문서 정합 · 말미 개정 이력) · 확인: (7명 이름 — D1 회의 후 채운다)**
+**v1.0 확정 · 2026-09-21 작성 · 2026-10-01 개정(말미 개정 이력) · 확인: 윤동호(BE-A) · 정세진(BE-B) · 원종현(BE-C) · 박한나(BE-D) · 채수림(FE-A) · 정성재(FE-B) · 이승혁(FE-C)**
 
 > **이 파일의 정본은 `UDT-Used_Device_Trade-backend` 리포에만 있다.**
 > 프론트 리포에는 복사하지 않는다 — 복사본은 반드시 낡는다(§12).
@@ -90,7 +90,7 @@
 **7명 — 백엔드 4(BE-A~D) / 프론트 3(FE-A~C).** 조는 **둘**, 팀 층 seam은 **API 하나**.
 상세는 `docs/참고/역할분담.md`.
 
-### 7. 화면 목록 (§3) — 사용자 7종 + 관리자 3종. **이 목록에 없는 화면은 만들지 않는다.**
+### 7. 화면 목록 (§3) — 사용자 7종(+ NotFound) + 관리자 3종. **이 목록에 없는 화면은 만들지 않는다.**
 
 ### 8. 인증
 **범위에 있음.** 이메일+비밀번호 1종 · BCrypt · JWT(사용자) / 세션 폼(관리자).
@@ -210,7 +210,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | SCR-001 | `/` | 상품 목록 (검색·카테고리·페이징) | 공개 | FE-B |
 | SCR-002 | `/products/:id` | 상품 상세 (이미지·찜·구매) | 공개(구매는 로그인) | FE-B |
 | SCR-003 | `/products/new` | 상품 등록 (이미지 다중 업로드) | 로그인 | FE-B |
-| SCR-004 | `/mypage` | 마이페이지 (내 상품/판매/구매/찜 4탭 · 잔액) | 로그인 | FE-C |
+| SCR-004 | `/mypage` | 마이페이지 (구매/판매/찜/내 상품 4탭 · 잔액) | 로그인 | FE-C |
 | SCR-005 | `/transactions/:id` | 거래 상세 (상태별 액션) | 로그인(당사자만) | FE-C |
 | SCR-006 | `/login` | 로그인 | 공개 | FE-A |
 | SCR-007 | `/signup` | 회원가입 | 공개 | FE-A |
@@ -245,8 +245,8 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 (`/api/auth/**` 응답은 이 처리에서 제외 — 로그인 실패도 401이라 무한 리다이렉트가 된다.)
 
 ### 3.5 와이어프레임
-화면당 손그림 1장(사진) · 화면당 5분 캡 · 첫날. **고해상도 시안 금지.**
-`docs/wireframes/SCR-00N.jpg` — 여기 그려진 데이터 요소가 §4 응답 필드의 출발점이다.
+화면당 와이어프레임 1장 · 첫날. **고해상도 시안 금지.**
+피그마(`docs/04-화면설계서.md` 상단 링크)에 그렸다 — 여기 그려진 데이터 요소가 §4 응답 필드의 출발점이다.
 
 ---
 
@@ -470,7 +470,7 @@ PAID(가상결제완료) ──판매자 송장입력──▶ SHIPPING(배송�
 | `transactions` | id · product_id(FK) · buyer_id(FK) · amount_krw · status · courier · tracking_no · created_at · confirmed_at | `idx_transactions_product(product_id)` — **유니크 아님**(§2.4) |
 | `disputes` | id · transaction_id(FK) · reporter_id(FK) · reason · status · admin_memo · created_at · resolved_at | **`uk_disputes_transaction(transaction_id)`** |
 | `dispute_files` | id · dispute_id(FK) · stored_name · original_name · size_bytes | |
-| `reviews` (P2) | id · transaction_id(FK) · writer_id · target_id · rating · content | `uk_reviews_transaction` |
+| `reviews` (P2 · **미구현**) | id · transaction_id(FK) · writer_id · target_id · rating · content | `uk_reviews_transaction` |
 
 ### 6.1 DB 연결 전 확인 (MUST · 30초)
 
@@ -532,7 +532,7 @@ MariaDB의 비밀번호 계정은 기본이 `mysql_native_password`라 추가 �
   리다이렉트되어 프론트 콘솔에 `Unexpected token '<'`가 뜬다.
 - `BCryptPasswordEncoder` 빈 1개 · 관리자 컨트롤러 메서드 하나에
   `@PreAuthorize("hasRole('ADMIN')")` + `@EnableMethodSecurity` (메서드 레벨 보안 증거)
-- **CORS는 전역 설정 클래스 하나**에 `http://localhost:5173` 등록 ·
+- **CORS는 전역 설정 클래스 하나**에 `http://localhost:5173`(개발) · `http://localhost:4173`(`vite preview`) 등록 ·
   `CORS_ALLOWED_ORIGINS` 환경변수에서 읽는다 · `@CrossOrigin` 남발 금지 ·
   **Security 체인에도 같은 허용을 넣는다.** `127.0.0.1:5173`은 다른 origin이니
   "주소창은 localhost로만" 규칙으로 간다.
@@ -557,7 +557,7 @@ B2. Controller에서 Repository 직접 호출 금지.
 B3. Service에 웹 타입(HttpServletRequest·ResponseEntity·Model) 금지.
     검사: grep -rlE "ResponseEntity|HttpServletRequest|org.springframework.ui.Model" \
           src/main/java --include='*Service.java'                                     (무출력)
-B4. 상태 전이(Product.changeStatus · Transaction.transition)는 TransactionService에서만 (§2.5).
+B4. 상태 전이(Product·Transaction `changeStatus` · `ProductRepository.transition`)는 TransactionService에서만 (§2.5).
     검사: grep -rl "changeStatus(\|\.transition(" src/main/java --include='*.java' \
           | grep -v "entity/\|TransactionService"                                     (무출력)
 B5. 관리자 전용 처리(검수 승인/반려 · 강제 환불/확정)는 REST(`/api/admin/**`)로 열지 않는다 —

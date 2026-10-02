@@ -99,7 +99,7 @@ UDT-Used_Device_Trade-backend/
     │   ├── controller/     Health · Category · Product · ProductImage · Wish · Auth · Me · Transaction · Dispute
     │   ├── dto/            리소스 접두어가 오너
     │   ├── security/       JwtTokenProvider · JwtAuthenticationFilter · CustomUserDetailsService · UserPrincipal · CurrentUser   BE-B
-    │   ├── service/        리소스별 Service 9개 · FileStorageService(BE-A)
+    │   ├── service/        리소스별 Service 8개 + FileStorageService(BE-A)
     │   └── admin/          AdminLogin · AdminProduct(검수) · AdminDispute(분쟁) · AdminDisputeFile · 예외 핸들러   BE-B
     └── resources/
         ├── application.yml · application-local.yml · application-prod.yml · data.sql
@@ -136,20 +136,19 @@ UDT-Used_Device_Trade-backend/
 | 1 | 도메인 설계서 | `docs/01-도메인설계서.md` | 작성 완료 |
 | 2 | Entity 설계서 | `docs/02-Entity설계서.md` | 작성 완료 (N+1 전후 캡처 반영) |
 | 3 | REST API 설계서 | `docs/03-REST-API설계서.md` | 작성 완료 (9/29 실물 대조) |
-| 4 | 화면 설계서 | `docs/04-화면설계서.md` | **와이어프레임(D3)·캡처(D8) 대기** |
-| 5 | React 컴포넌트와 Props 설계서 | `docs/05-React컴포넌트와Props설계서.md` | **D8 실물 재발췌** |
+| 4 | 화면 설계서 | `docs/04-화면설계서.md` + [피그마](https://www.figma.com/design/5rUQ65BZRIlQr5RbdwF5Mv/UDT-Used_Device_Safe_Trade?node-id=3-2&p=f&t=WPxyqh3nrdWFCiTP-0) | 작성 완료 — 와이어프레임·화면은 피그마 |
+| 5 | React 컴포넌트와 Props 설계서 | `docs/05-React컴포넌트와Props설계서.md` | 작성 완료 (10/1 실물 재발췌) |
 
 ### 그 외
 
 | 항목 | 위치 | 상태 |
 |---|---|---|
-| 개인 회고록 7명분 | `docs/회고록/` (양식 포함) | D9 |
-| 발표 대본 | `docs/참고/발표대본.md` | 슬라이드는 D9 |
+| 개인 회고록 7명분 | `docs/회고록/` (양식 포함) | 작성 완료 |
+| 발표 슬라이드 · 대본 | `docs/발표/UDT-발표.pdf` (원본 pptx) · `docs/참고/발표대본.md` | 작성 완료 |
 | 기획서 · 아키텍처 · 역할분담 · 예상질문 | `docs/참고/` | 작성 완료 |
 | 일일 보고 | `docs/참고/일일보고/` (양식 포함) | 매일 |
 
-**`[D#]` 표시가 있는 칸은 그 시점의 실제 산출물로 채운다.** 지금 채우면 없는 캡처와
-측정하지 않은 수치를 적게 된다.
+설계서의 수치·캡처는 모두 실제 코드와 실행 결과에서 가져왔다 (최종 대조 2026-10-02).
 
 ---
 
@@ -193,5 +192,5 @@ main                    정본 · 시연. dev에서만, 팀장(BE-A)이 올린�
 2. **Spring Boot `4.0.8` / Java 17**로 잡아 뒀다(수업과 동일). 다르면 `pom.xml`의 parent
    `<version>` 한 줄만 바꾼다. Lombok을 쓰므로 IntelliJ **Enable annotation processing**을 켠다.
 3. **컴파일·기동은 검증됐다** — 2026-09-22 Windows · JDK 24 · IntelliJ · MariaDB 10.11.18(3307)에서
-   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/13 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
+   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/10 확인(당시 검사 10개 · 현재 13개 13/13). 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
    `@Primary`로 잡았다(`onboarding/backend.md` 에러 색인).

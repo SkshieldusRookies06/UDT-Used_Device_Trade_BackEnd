@@ -7,11 +7,11 @@
 | 프로젝트명 | UDT (Used Device Trade) |
 | 문서 버전 | v1.0 |
 | 작성일 | 2026-09-21 |
-| 작성자 | (이름) |
-| 최종 수정일 | 2026-09-29 |
+| 작성자 | 윤동호 |
+| 최종 수정일 | 2026-10-02 |
 
 > 정본: `SPEC.md` §4 · §5 · §7 · `common/ErrorCode.java` — 이 문서는 파생본이다.
-> 2026-09-29 실물(컨트롤러·DTO·`GlobalExceptionHandler`)과 대조해 확정했다.
+> 2026-10-02 실물(컨트롤러·DTO·`GlobalExceptionHandler`)과 대조해 확정했다.
 
 ---
 
@@ -143,7 +143,7 @@ Security 필터가 내는 401도 같은 `ErrorResponse`를 직렬화하므로 �
 ```json
 { "success": false, "statusCode": 400, "code": "VALIDATION_ERROR",
    "message": "입력값을 확인해 주세요",
-   "fields": [ { "name": "trackingNo", "message": "송장번호는 8~20자리 숫자입니다" } ],
+   "fields": [ { "name": "trackingNo", "message": "송장번호는 숫자 8~20자리입니다" } ],
    "timestamp": "…" }
 ```
 
@@ -353,7 +353,7 @@ POST /api/auth/login
 **GET /api/disputes/{id}/files/{fileId}** · **GET /admin/disputes/{id}/files/{fileId}**
 
 응답: 파일 바이트 + **`Content-Disposition: attachment; filename="..."`**
-에러: 403 `ACCESS_DENIED` · 404 `DISPUTE_NOT_FOUND`
+에러(`/api` 경로): 403 `ACCESS_DENIED` · 404 `DISPUTE_NOT_FOUND` — `/admin` 경로는 JSON이 아니라 로그인 화면 이동·HTML 에러 페이지로 응답한다
 
 > **경로가 둘인 이유** — `/api/**`는 무상태 JWT 체인이라 브라우저 주소창 이동으로는 인증되지 않는다.
 > React는 `/api/...`를 `Authorization` 헤더와 함께 **blob으로** 받아 내려받고(`<a href>` 불가),
@@ -424,7 +424,7 @@ Advice가 처리하는 스프링 예외:
 | `MethodArgumentTypeMismatchException` | 400 `VALIDATION_ERROR` (형식 불량 id) |
 | `MissingServletRequestParameterException` | 400 `VALIDATION_ERROR` |
 | `MissingServletRequestPartException` | 400 `VALIDATION_ERROR` (multipart 필수 파트 누락) |
-| `MaxUploadSizeExceededException` | 400 `FILE_TOO_LARGE` (multipart 전체 한도 초과) |
+| `MaxUploadSizeExceededException` | 400 `FILE_TOO_LARGE` (파일당 5MB · 요청 전체 30MB 한도 초과) |
 | `HttpRequestMethodNotSupportedException` | 405 `METHOD_NOT_ALLOWED` |
 | `HttpMediaTypeNotSupportedException` | 415 `UNSUPPORTED_MEDIA_TYPE` |
 | `NoResourceFoundException` | 404 `RESOURCE_NOT_FOUND` |
@@ -480,4 +480,4 @@ OK: http://localhost:8081 계약 준수
 - [x] 페이지네이션 응답 구조가 정의되어 있다
 - [x] 빈 값 표현(`null` vs `[]`)이 필드마다 정의되어 있다
 - [x] 날짜 형식과 시간대가 고정되어 있다
-- [ ] 전 엔드포인트 구현 완료 및 검증 스크립트 통과 (D8)
+- [x] 전 엔드포인트 구현 완료 및 검증 스크립트 통과 (실서버·목 서버 13/13 · 테스트 124/124 · 10/1)
