@@ -5,13 +5,13 @@
 | 항목 | 내용                      |
 |---|-------------------------|
 | 프로젝트명 | UDT (Used Device Trade) |
-| 문서 버전 | v0.2                    |
+| 문서 버전 | v1.0                    |
 | 작성일 | 2026-09-28              |
 | 작성자 | 윤동호, 원종현                     |
-| 최종 수정일 | 2026-09-21              |
+| 최종 수정일 | 2026-10-02              |
 
 > 정본: `src/main/java/com/rookies6/udt/entity/` · `application-local.yml` · `data.sql`
-> 이 문서는 **코드에서 발췌**한다. D2 엔티티 확정 후 작성하고, D8에 재발췌한다.
+> 이 문서는 **코드에서 발췌**한다. D2 엔티티 확정 후 작성했고, 2026-10-02 코드와 다시 대조했다.
 
 ---
 
@@ -19,9 +19,9 @@
 
 ### 1.1 설계 목적
 
-거래 신뢰 프로세스를 데이터 모델로 표현한다. 특히 **한 상품에 거래는 하나**,
-**한 거래에 분쟁은 하나**라는 업무 규칙을 DB 제약으로 강제해, 애플리케이션 버그가 있어도
-데이터가 깨지지 않게 한다.
+거래 신뢰 프로세스를 데이터 모델로 표현한다. 특히 **한 거래에 분쟁은 하나**라는 업무 규칙은 DB 제약(`uk_disputes_transaction`)으로 강제하고,
+**진행 중인 거래는 상품당 하나**라는 규칙은 상품 상태 전이(`ON_SALE → IN_TRADE` 조건부 갱신)로 보장해,
+애플리케이션 버그가 있어도 데이터가 깨지지 않게 한다. 환불 후 재구매를 허용하므로 상품–거래는 N:1이다.
 
 ### 1.2 설계 원칙
 
@@ -55,7 +55,7 @@
 | `Product` | 핵심 | 판매 상품 | BE-A |
 | `ProductImage` | 보조 | 상품 사진 (1:N) | BE-A |
 | `Wish` | **조인** | 회원↔상품 다대다 | BE-A |
-| `Transaction` | 핵심 | 거래 (상품과 1:1) | BE-A |
+| `Transaction` | 핵심 | 거래 (상품과 N:1 · 진행 중 1건) | BE-A |
 | `Dispute` | 핵심 | 분쟁 (거래와 1:1) | BE-A |
 | `DisputeFile` | 보조 | 증빙 파일 (1:N) | BE-A |
 
@@ -143,6 +143,7 @@ public void deposit(Long amount)  { this.balanceKrw += amount; }
 | `conditionGrade` | ConditionGrade | not null | S·A·B·C |
 | `status` | ProductStatus | not null | 생성 시 `INSPECTING` |
 | `rejectReason` | String(200) | nullable | 반려 사유 |
+| `updatedAt` | OffsetDateTime | not null · `@LastModifiedDate` | 마지막 수정 시각 (상세 응답 `updatedAt`) — Product에만 둔다 |
 | `images` | List\<ProductImage\> | **`@OneToMany(mappedBy)`** | `cascade = ALL` · `orphanRemoval` · `@OrderBy("sortOrder asc")` |
 
 ```java
@@ -306,7 +307,7 @@ public abstract class BaseEntity {
 | 도메인 규칙 | 애노테이션 | 에러 코드 |
 |---|---|---|
 | 이메일 형식 | `@Email` `@NotBlank` | `VALIDATION_ERROR` |
-| 비밀번호 길이 | `@Size(min=8)` | `VALIDATION_ERROR` |
+| 비밀번호 길이·문자 | `@Size(min=8, max=72)` `@Pattern(영문·숫자·특수문자)` | `VALIDATION_ERROR` |
 | 상품명 필수·길이 | `@NotBlank` `@Size(max=100)` | `VALIDATION_ERROR` |
 | 가격 양수 | `@Positive` | `VALIDATION_ERROR` |
 | 송장번호 형식 | `@Pattern(regexp="\\d{8,20}")` | `VALIDATION_ERROR` |
@@ -443,7 +444,7 @@ public abstract class BaseEntity {
   (`node seams/check-api.mjs` — 13개 검사).
 - **인수 테스트**(`src/test/.../acceptance/` · `@SpringBootTest` + 실제 MariaDB · 테스트마다 롤백)가 엔티티·Repository를
   실제 DB로 검증한다 — 잔액 차감·상태 전이의 원자성, 상품당 거래 여러 건(`TransactionPerProductTest`),
-  감사 필드(`JpaAuditingTest`), 시드 시각·인코딩(`SeedTimestampTest`). 전체 122개.
+  감사 필드(`JpaAuditingTest`), 시드 시각·인코딩(`SeedTimestampTest`). 전체 124개.
 
 ---
 

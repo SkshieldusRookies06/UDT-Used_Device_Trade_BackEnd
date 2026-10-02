@@ -99,7 +99,7 @@ UDT-Used_Device_Trade-backend/
     │   ├── controller/     Health · Category · Product · ProductImage · Wish · Auth · Me · Transaction · Dispute
     │   ├── dto/            리소스 접두어가 오너
     │   ├── security/       JwtTokenProvider · JwtAuthenticationFilter · CustomUserDetailsService · UserPrincipal · CurrentUser   BE-B
-    │   ├── service/        리소스별 Service 9개 · FileStorageService(BE-A)
+    │   ├── service/        리소스별 Service 8개 + FileStorageService(BE-A)
     │   └── admin/          AdminLogin · AdminProduct(검수) · AdminDispute(분쟁) · AdminDisputeFile · 예외 핸들러   BE-B
     └── resources/
         ├── application.yml · application-local.yml · application-prod.yml · data.sql
@@ -143,13 +143,12 @@ UDT-Used_Device_Trade-backend/
 
 | 항목 | 위치 | 상태 |
 |---|---|---|
-| 개인 회고록 7명분 | `docs/회고록/` (양식 포함) | 작성 중 |
-| 발표 대본 · 슬라이드 | `docs/참고/발표대본.md` | 작성 중 |
+| 개인 회고록 7명분 | `docs/회고록/` (양식 포함) | 작성 완료 |
+| 발표 슬라이드 · 대본 | `docs/발표/UDT-발표.pdf` (원본 pptx) · `docs/참고/발표대본.md` | 작성 완료 |
 | 기획서 · 아키텍처 · 역할분담 · 예상질문 | `docs/참고/` | 작성 완료 |
 | 일일 보고 | `docs/참고/일일보고/` (양식 포함) | 매일 |
 
-**`[D#]` 표시가 있는 칸은 그 시점의 실제 산출물로 채운다.** 지금 채우면 없는 캡처와
-측정하지 않은 수치를 적게 된다.
+설계서의 수치·캡처는 모두 실제 코드와 실행 결과에서 가져왔다 (최종 대조 2026-10-02).
 
 ---
 
@@ -193,5 +192,5 @@ main                    정본 · 시연. dev에서만, 팀장(BE-A)이 올린�
 2. **Spring Boot `4.0.8` / Java 17**로 잡아 뒀다(수업과 동일). 다르면 `pom.xml`의 parent
    `<version>` 한 줄만 바꾼다. Lombok을 쓰므로 IntelliJ **Enable annotation processing**을 켠다.
 3. **컴파일·기동은 검증됐다** — 2026-09-22 Windows · JDK 24 · IntelliJ · MariaDB 10.11.18(3307)에서
-   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/13 확인. 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
+   `Started UdtApplication` · 테이블 8개 생성 · 게이트 8/10 확인(당시 검사 10개 · 현재 13개 13/13). 첫 실행 때 걸린 것은 `CorsConfigurationSource` 빈 중복 하나였고
    `@Primary`로 잡았다(`onboarding/backend.md` 에러 색인).

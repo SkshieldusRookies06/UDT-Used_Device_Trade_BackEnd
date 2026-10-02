@@ -8,7 +8,7 @@
 | 문서 버전 | v1.0 |
 | 작성일 | 2026-09-21 |
 | 작성자 | 윤동호 |
-| 최종 수정일 | 2026-10-01 |
+| 최종 수정일 | 2026-10-02 |
 
 > 정본: `../UDT-Used_Device_Trade-frontend/src/`(형제 리포) · `04-화면설계서.md`
 > D3에 골격을 작성하고, 2026-10-01 실제 코드(프론트 main `9424dd0`)에서 재발췌했다.
@@ -35,8 +35,8 @@
 ```
 
 **분리 기준**: 두 화면 이상에서 반복되는가 · 독립적으로 이해되는가 · 커졌는가.
-문서 기준은 100줄, 실제 추출 기준은 **200줄**을 넘을 때로 운영한다
-(미리 쪼개면 오히려 추적이 어려워진다).
+화면 전용 하위 컴포넌트는 미리 쪼개지 않고 화면 파일 안에 두었다(미리 쪼개면 오히려 추적이 어려워진다).
+그래서 큰 화면은 300~600줄이며(거래 상세 661줄), 두 화면 이상에서 반복되는 것만 `components/`로 뺐다.
 
 ### STEP 2 — 컴포넌트 트리
 
@@ -44,15 +44,15 @@
 App (RouterProvider)
 └── Layout                          (Props: 없음 / 헤더 인라인 · authStore 구독)
     └── Outlet
-        ├── ProductListPage         (State: data, loading, error / URL: q, page)
+        ├── ProductListPage         (State: data, loading, error / URL: q, categoryId, page)
         │   ├── ProductCard         (Props: product)
         │   │   └── StatusBadge     (Props: status)
         │   ├── LoadingSpinner      (Props: label)
         │   └── Pagination          (Props: page, onChange)
-        ├── ProductDetailPage       (State: product, loading, error / wishStore)
-        ├── ProductNewPage          (State: form, files, submitting)
-        ├── MyPage                  (State: tab, data)
-        ├── TransactionDetailPage   (State: transaction, actionLoading)
+        ├── ProductDetailPage       (State: product, loading, error, isWished, wishCount / wishStore)
+        ├── ProductNewPage          (State: form, images, errors, submitting)
+        ├── MyPage                  (State: data, loading, error / URL: tab, page)
+        ├── TransactionDetailPage   (State: txn, loading, error, actionLoading)
         ├── LoginPage               (State: form / authStore 쓰기)
         ├── SignupPage              (State: form)
         └── NotFoundPage · ErrorPage  (라우트 `*` · errorElement)
@@ -105,7 +105,7 @@ App (RouterProvider)
 |---|---|---|
 | 레이아웃 | `Layout` | 전체 |
 | 공통 UI | `Button` | 7 |
-| 공통 UI | `LoadingSpinner` | 4 |
+| 공통 UI | `LoadingSpinner` | 5 |
 | 공통 UI | `StatusBadge` | 4 |
 | 도메인 | `ProductCard` | 2 (목록·마이페이지) |
 | 라우팅 | `RequireAuth` | 3 |
@@ -121,6 +121,7 @@ App (RouterProvider)
 
 ```
 src/
+├── main.jsx                   React 진입점                       공용
 ├── App.jsx                    라우트 등록 + 오류 화면 + 404      공용
 ├── routes.js                  경로 문자열 상수                   공용
 ├── api/                       client.js · auth.js · products.js  공용
@@ -129,6 +130,7 @@ src/
 ├── components/                Button · Layout · LoadingSpinner   공용
 │                              ProductCard · StatusBadge · RequireAuth
 ├── styles/                    tokens.css · global.css            공용
+├── assets/                    로고 이미지                        공용
 └── pages/
     ├── ProductListPage/       index.jsx · Pagination.jsx · *.module.css
     ├── ProductDetailPage/
@@ -159,7 +161,7 @@ src/
 | `product.status` | string | Y | — | 상태 |
 | `product.categoryName` | string | N | — | |
 | `product.sellerNickname` | string | N | — | |
-| `product.thumbnailUrl` | string | N | `null` | 없으면 대체 표시 |
+| `product.thumbnailUrl` | string | N | — | `null`이면 "이미지 없음" 대체 표시 |
 
 ### Button
 
@@ -193,11 +195,11 @@ src/
 
 | 화면 | 상태 |
 |---|---|
-| ProductListPage | `data` · `loading` · `error` · `keyword`(입력 중) · `reloadKey`(다시 시도용) |
-| ProductDetailPage | `product` · `loading` · `error` |
-| ProductNewPage | `form` · `files` · `submitting` · `fieldErrors` |
-| MyPage | `data` · `loading` · `error` (탭은 URL `?tab=`) |
-| TransactionDetailPage | `transaction` · `actionLoading` |
+| ProductListPage | `data` · `loading` · `error` · `categories` · `keyword`(입력 중) · `reloadKey`(다시 시도용) |
+| ProductDetailPage | `product` · `loading` · `error` · `reloadKey` · `isWished` · `wishCount` · `purchasing` · `purchaseError` |
+| ProductNewPage | `form` · `images` · `errors`(필드별) · `generalError` · `submitting` · `categories` |
+| MyPage | `data` · `loading` · `error` · `reloadKey` (탭·페이지는 URL `?tab=&page=`) |
+| TransactionDetailPage | `txn` · `loading` · `error` · `reloadKey` · `actionLoading` · 송장·분쟁 폼 상태 |
 
 > `loading`·`error`를 화면마다 두는 이유: 화면 상태 계약의 4가지와 1:1로 대응시키기
 > 위해서다. 둘 중 하나라도 없으면 "빈 결과"와 "로딩"이 같은 화면이 된다.
@@ -212,6 +214,7 @@ src/
 ```
 
 구독 컴포넌트: `Layout`(헤더 표시) · `RequireAuth`(보호 라우트) · `LoginPage`(쓰기) ·
+`ProductCard` · `ProductDetailPage`(찜·구매 시 로그인 확인) · `ProductNewPage` · `MyPage` · `TransactionDetailPage` ·
 `api/client.js`(요청 헤더 · 401 처리)
 
 **`wishStore`** — 찜한 상품 ID 목록
@@ -220,7 +223,7 @@ src/
 { wishedIds, setWishedIds(ids), add(id), remove(id), clear() }
 ```
 
-구독 컴포넌트: `ProductListPage` · `ProductDetailPage` · `MyPage`
+구독 컴포넌트: `ProductCard`(목록·마이페이지 찜 탭의 하트) · `ProductDetailPage` · `Layout`(로그인 시 찜 id 초기 적재)
 
 > **스토어를 2개로 제한한 이유:** 전역 상태는 담당자가 불분명한 공용 파일을 늘린다.
 > 여러 화면이 실제로 공유하는 것만 올리고, 나머지는 URL과 로컬 상태로 해결했다.
@@ -233,12 +236,13 @@ src/
 
 | 화면 | 함수 | 엔드포인트 |
 |---|---|---|
-| SCR-001 | `fetchProducts(params)` | `GET /api/products` |
-| SCR-002 | `fetchProduct(id)` · `addWish`/`removeWish` · `purchase` | `GET /api/products/{id}` 외 |
+| SCR-001 | `fetchProducts(params)` · `fetchCategories()` · (카드 하트) `addWish`/`removeWish` | `GET /api/products` · `GET /api/categories` 외 |
+| SCR-002 | `fetchProduct(id)` · `addWish`/`removeWish` · `purchase` · `fetchMe` | `GET /api/products/{id}` 외 |
 | SCR-003 | `fetchCategories()` · `createProduct(product, images)` | `POST /api/products` |
-| SCR-004 | `fetchMyProducts` · `fetchMyTransactions` · `fetchMyWishes` | `/api/me/**` |
-| SCR-005 | `fetchTransaction` · `registerShipping` · `confirmTransaction` · `openDispute` | `/api/transactions/**` |
-| SCR-006/7 | `login` · `signup` · `fetchMe` | `/api/auth/**` · `/api/me` |
+| SCR-004 | `fetchMe` · `fetchMyProducts` · `fetchMyTransactions` · `fetchMyWishes` | `/api/me` · `/api/me/**` |
+| SCR-005 | `fetchMe` · `fetchTransaction` · `registerShipping` · `confirmTransaction` · `openDispute` · `downloadDisputeFile` | `/api/transactions/**` · `/api/disputes/**` |
+| SCR-006/7 | `login` · `signup` | `/api/auth/**` |
+| (공통) `Layout` | `fetchMyWishes` | 로그인 시 찜 id 초기 적재 |
 
 **컴포넌트에서 `axios`·`fetch`를 직접 호출하지 않는다.** 전부 `src/api/`를 거친다 —
 계약이 바뀌면 고칠 곳이 한 곳이 된다.
@@ -359,7 +363,7 @@ export default function ProductListPage() {
 
 | 항목 | 적용 |
 |---|---|
-| 라우트 단위 코드 분할 | 미적용 — 화면 10개 규모라 번들 분할 이득이 작아 범위에서 뺐다 |
+| 라우트 단위 코드 분할 | 미적용 — 라우트 8개(+ 오류 화면) 규모라 번들 분할 이득이 작아 범위에서 뺐다 |
 | 이미지 | `object-fit: cover` + 고정 비율로 레이아웃 흔들림 방지 |
 | 불필요한 리렌더 | 전역 상태를 2개로 제한해 구독 범위를 좁힘 |
 
