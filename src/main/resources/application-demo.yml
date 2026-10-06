@@ -1,0 +1,9 @@
+# 시연용 — local 위에 겹쳐 쓴다 (Active profiles: local,demo)
+# 처음 한 번은 local만으로 실행해 테이블·시드를 만든 뒤, 그다음부터 local,demo로 실행한다.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+  sql:
+    init:
+      mode: never
